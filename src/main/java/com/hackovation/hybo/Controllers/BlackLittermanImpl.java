@@ -38,7 +38,7 @@ import com.hackovation.hybo.bean.dao.TestDaoInterface;
 @RequestMapping(value="/rest/bl")
 public class BlackLittermanImpl {
 	
-	@Autowired
+	//@Autowired
 	TestDaoInterface testDaoInterface;
 	
 	@RequestMapping(method=RequestMethod.GET,value="/test")

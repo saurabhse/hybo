@@ -7,8 +7,8 @@ import javax.persistence.Id;
 import javax.persistence.Table;
 import javax.validation.constraints.NotNull;
 
-@Entity
-@Table(name="Test")
+//@Entity
+//@Table(name="Test")
 public class TestEntity {
 
 	@Id

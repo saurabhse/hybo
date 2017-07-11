@@ -10,11 +10,11 @@ import org.springframework.transaction.annotation.Transactional;
 import com.hackovation.hybo.bean.dao.TestDaoInterface;
 import com.hackovation.hybo.entities.TestEntity;
 
-@Transactional
-@Repository
-public class TestDao implements TestDaoInterface {
+//@Transactional
+//@Repository
+public class TestDao {//implements TestDaoInterface {
 
-	@PersistenceContext	
+	/*@PersistenceContext	
 	private EntityManager entityManager;	
 	
 	@Override
@@ -22,6 +22,6 @@ public class TestDao implements TestDaoInterface {
 	public void insert() {
 		entityManager.persist(new TestEntity("Aman"));
 		
-	}
+	}*/
 
 }
