@@ -24,24 +24,36 @@ import org.algo.series.CalendarDateSeries;
 import org.algo.type.CalendarDate;
 import org.algo.type.CalendarDateUnit;
 import org.assertj.core.util.Arrays;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.RestController;
 
 import com.hackovation.hybo.ReadFile;
+import com.hackovation.hybo.bean.dao.TestDaoInterface;
 
-@Controller()
-@RequestMapping("/bl")
+@RestController
+@RequestMapping(value="/rest/bl")
 public class BlackLittermanImpl {
 	
+	@Autowired
+	TestDaoInterface testDaoInterface;
+	
+	@RequestMapping(method=RequestMethod.GET,value="/test")
+	public @ResponseBody String testCRDU(){
+		testDaoInterface.insert();
+		return "success";
+	}
 	
 	@RequestMapping(method=RequestMethod.GET,value="/getPortfolio")
 	public @ResponseBody Map<String,Portfolio> getPortfolio(){
 		
+		System.out.println("Service HIT");
 		// Step 1. Calculate Covariance Matrix
 		BasicMatrix covarianceMatrix = getCovarianceMatrix();
-		System.out.println("--------------Covarioance Matrix---------------------");
+		System.out.println("--------------Covariance Matrix---------------------");
 		System.out.println(covarianceMatrix);
 
 		// Step 2. Calculate Lambda (Risk Aversion Factor)
@@ -68,7 +80,7 @@ public class BlackLittermanImpl {
 		LinkedHashMap<String, String> assetETFMap = getassetETFMap();
 		LinkedHashMap<String, Double> assetClassWiseWeight = new LinkedHashMap<>();
 		long i = 0;
-		for(String assetClass:assetClassWiseWeight.keySet()){
+		for(String assetClass:assetETFMap.keySet()){
 			assetClassWiseWeight.put(assetClass, finalAssetWeights.doubleValue(i));
 		}
 		Portfolio portfolio = new Portfolio(30000);
@@ -196,7 +208,9 @@ public class BlackLittermanImpl {
 	}
 	private String[] getAssetsTickers(){
 		LinkedHashMap<String,String> assetETFMap = getassetETFMap();
-	 return (String[])assetETFMap.keySet().toArray();
+		String[] arr = new String[assetETFMap.keySet().size()];
+		assetETFMap.keySet().toArray(arr);
+		return arr;
 	}
 	private String[] getAssetsTickersOld(){
 		String[] tickers = new String[5];

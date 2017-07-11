@@ -1,5 +1,7 @@
 package com.hackovation.hybo.Controllers;
 
+import java.io.Serializable;
+import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -11,7 +13,8 @@ import org.algo.finance.data.GoogleSymbol;
 import org.algo.finance.data.GoogleSymbol.Data;
 import org.algo.series.CalendarDateSeries;
 
-public class Portfolio {
+
+public class Portfolio implements Serializable{
 
 	double investment;
 	String ETF;
@@ -34,12 +37,39 @@ public class Portfolio {
 	 		if(dataList != null && dataList.size()>0){
 	 			Data data = dataList.get(0);
 	 			double perIndexCost = data.getPrice();
-	 			portfolio.number = Integer.valueOf((cost/perIndexCost)+"");
+	 			NumberFormat nf = NumberFormat.getInstance();
+	 			System.out.println(cost +" --- "+perIndexCost);
+	 			portfolio.number = Double.valueOf((cost/perIndexCost)).intValue();
 	 			portfolio.cost=portfolio.number*perIndexCost;
-	 			portfolio.ETF = assetClass;
-	 			portfolioMap.put(ETF, portfolio);
+	 			portfolio.ETF = assetClassETFMap.get(assetClass);
+	 			portfolio.investment=this.investment;
+	 			portfolioMap.put(assetClass, portfolio);
 	 		}
 		}
 		return portfolioMap;
+	}
+	public double getInvestment() {
+		return investment;
+	}
+	public void setInvestment(double investment) {
+		this.investment = investment;
+	}
+	public String getETF() {
+		return ETF;
+	}
+	public void setETF(String eTF) {
+		ETF = eTF;
+	}
+	public int getNumber() {
+		return number;
+	}
+	public void setNumber(int number) {
+		this.number = number;
+	}
+	public double getCost() {
+		return cost;
+	}
+	public void setCost(double cost) {
+		this.cost = cost;
 	}
 }
