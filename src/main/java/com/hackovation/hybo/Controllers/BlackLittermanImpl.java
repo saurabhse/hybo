@@ -6,7 +6,9 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.TreeSet;
 
 import org.algo.array.Array2D;
@@ -21,15 +23,21 @@ import org.algo.matrix.BigMatrix;
 import org.algo.series.CalendarDateSeries;
 import org.algo.type.CalendarDate;
 import org.algo.type.CalendarDateUnit;
+import org.assertj.core.util.Arrays;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.ResponseBody;
 
 import com.hackovation.hybo.ReadFile;
 
-
-
-
-
+@Controller()
+@RequestMapping("/bl")
 public class BlackLittermanImpl {
-	public static void main(String...args){
+	
+	
+	@RequestMapping(method=RequestMethod.GET,value="/getPortfolio")
+	public @ResponseBody Map<String,Portfolio> getPortfolio(){
 		
 		// Step 1. Calculate Covariance Matrix
 		BasicMatrix covarianceMatrix = getCovarianceMatrix();
@@ -56,13 +64,21 @@ public class BlackLittermanImpl {
 /*		System.out.println("--------------Asset Return Matrix---------------------");
 		System.out.println(bl.getAssetReturns());
 */		System.out.println("--------------Asset Weights---------------------");
-		System.out.println(bl.getAssetWeights());
-		
+		BasicMatrix finalAssetWeights = bl.getAssetWeights();
+		LinkedHashMap<String, String> assetETFMap = getassetETFMap();
+		LinkedHashMap<String, Double> assetClassWiseWeight = new LinkedHashMap<>();
+		long i = 0;
+		for(String assetClass:assetClassWiseWeight.keySet()){
+			assetClassWiseWeight.put(assetClass, finalAssetWeights.doubleValue(i));
+		}
+		Portfolio portfolio = new Portfolio(30000);
+		Map<String,Portfolio> map = portfolio.buildPortfolio(assetETFMap, assetClassWiseWeight);
 		System.out.println("Till Here");
+		return map;
 		
 	}
 	
-	static double[][] getMarketWeight(){
+	double[][] getMarketWeight(){
 		double[][] marketWeight = new double[4][1];
 		double[] totalValue = new double[4]; 
 		try{
@@ -93,7 +109,7 @@ public class BlackLittermanImpl {
 		marketWeight[3][0]=totalValue[3]/total;
 		return marketWeight;
 	}
-	static BasicMatrix getCovarianceMatrix(){
+	BasicMatrix getCovarianceMatrix(){
 		Collection<CalendarDateSeries<Double>> col = new ArrayList<>();
 		ReadFile readFile = new ReadFile();
 		col.add(readFile.getCalendarDataSeries("D:\\Wkspace\\Hacovation\\CRSP US Total Market.txt","A"));
@@ -103,7 +119,7 @@ public class BlackLittermanImpl {
 		BasicMatrix covarianceMatrix = FinanceUtils.makeCovarianceMatrix(col);
 		return covarianceMatrix;
 	}
-	static BasicMatrix getCovarianceMatrixOld(){
+	BasicMatrix getCovarianceMatrixOld(){
  		GoogleSymbol gs = new GoogleSymbol("AOR");
 		Collection<CalendarDateSeries<Double>> col = new ArrayList<>();
 		col.add(gs.getPriceSeries());
@@ -120,7 +136,7 @@ public class BlackLittermanImpl {
 	}
 	
 	//Reference : https://www.fool.com/knowledge-center/how-to-calculate-the-historical-variance-of-stock.aspx
-	static Double getLambda(){
+	Double getLambda(){
  		GoogleSymbol referenceData = new GoogleSymbol("OSPTX",CalendarDateUnit.DAY);
 		List<Data> historicalPriceReference = referenceData.getHistoricalPrices();
 		ArrayList<Double> historicalValuesRefernce = new ArrayList<>();
@@ -170,15 +186,19 @@ public class BlackLittermanImpl {
         return BigDecimal.valueOf(3.07);
     }
 */	
-	public static String[] getAssetsTickers(){
-		String[] tickers = new String[5];
-		tickers[0] = "A";
-		tickers[1] = "B";
-		tickers[2] = "C";
-		tickers[3] = "D";
-		return tickers;
+	private LinkedHashMap<String,String> getassetETFMap(){
+		LinkedHashMap<String,String> assetETFMap = new LinkedHashMap<>();
+		assetETFMap.put("CRSPTM1","VTI");
+		assetETFMap.put("CRSPLC1","VTV");
+		assetETFMap.put("CRSPML1","VOE");
+		assetETFMap.put("CRSPSC1","VBR");
+		return assetETFMap;
 	}
-	public static String[] getAssetsTickersOld(){
+	private String[] getAssetsTickers(){
+		LinkedHashMap<String,String> assetETFMap = getassetETFMap();
+	 return (String[])assetETFMap.keySet().toArray();
+	}
+	private String[] getAssetsTickersOld(){
 		String[] tickers = new String[5];
 		tickers[0] = "AOR";
 		tickers[1] = "MDIV";
@@ -265,7 +285,7 @@ public class BlackLittermanImpl {
 		}
 	}
 */	
-	public static void deprecated(){
+/*	public static void deprecated(){
 		String[] tickers = getAssetsTickersOld();
 		
 	// Step 1. Calculate Covariance Matrix
@@ -290,14 +310,14 @@ public class BlackLittermanImpl {
 		
 		
 //		List<Data> data = gs.getHistoricalPrices();
-/*		HashMap<CalendarDate, Double> aorMap = new HashMap<>();
+		HashMap<CalendarDate, Double> aorMap = new HashMap<>();
 		for(Data d:data)
 			aorMap.put(d.getKey(), d.getValue());
-*/
-/*		data = gs.getHistoricalPrices();
+
+		data = gs.getHistoricalPrices();
 		HashMap<CalendarDate, Double> mdivMap = new HashMap<>();
-*/
-/*		double[][] dataArray = {{4.0,2.0,0.60},
+
+		double[][] dataArray = {{4.0,2.0,0.60},
 							{4.2,2.1,0.59},
 							{3.9,2.0,0.58},
 							{4.3,2.1,0.62},
@@ -305,5 +325,5 @@ public class BlackLittermanImpl {
 		getCovarianceMatrix(dataArray);
 	}
 	
-*/}
 }
+*/}
