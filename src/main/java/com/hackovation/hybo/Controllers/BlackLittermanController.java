@@ -11,6 +11,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeSet;
 
+import javax.websocket.server.PathParam;
+
 import org.algo.array.Array2D;
 import org.algo.finance.FinanceUtils;
 import org.algo.finance.data.GoogleSymbol;
@@ -26,112 +28,34 @@ import org.algo.type.CalendarDateUnit;
 import org.assertj.core.util.Arrays;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.hackovation.hybo.ReadFile;
 import com.hackovation.hybo.bean.dao.TestDaoInterface;
+import com.hackovation.hybo.entities.PortfolioEntity;
+import com.hackovation.hybo.services.PortfolioService;
 
 @RestController
 @RequestMapping(value="/rest/bl")
-public class BlackLittermanImpl {
+public class BlackLittermanController {
 	
-	//@Autowired
-	TestDaoInterface testDaoInterface;
-	
-	@RequestMapping(method=RequestMethod.GET,value="/test")
-	public @ResponseBody String testCRDU(){
-		testDaoInterface.insert();
-		return "success";
-	}
+	@Autowired
+	PortfolioService portfolioService;
 	
 	@RequestMapping(method=RequestMethod.GET,value="/getPortfolio")
-	public @ResponseBody Map<String,Portfolio> getPortfolio(){
+	public @ResponseBody Map<String,PortfolioEntity> getPortfolio(@RequestParam(name="clientId") String clientId){
+		return portfolioService.buildPortfolio(clientId);
 		
-		System.out.println("Service HIT");
-		// Step 1. Calculate Covariance Matrix
-		BasicMatrix covarianceMatrix = getCovarianceMatrix();
-		System.out.println("--------------Covariance Matrix---------------------");
-		System.out.println(covarianceMatrix);
-
-		// Step 2. Calculate Lambda (Risk Aversion Factor)
-		Double lambda = 2.5d;
-		
-		
-		String[] tickers = getAssetsTickers();
-//		double[][] marketWeight = {{0.25},{3},{0.25},{0.25}};
-		double[][] marketWeight = getMarketWeight();
-		BasicMatrix marketWeightMatrix =  BigMatrix.FACTORY.rows(marketWeight);
-		MarketEquilibrium marketEquilibrium = new MarketEquilibrium(tickers, covarianceMatrix, lambda);
-		BlackLittermanModel bl  = new BlackLittermanModel(marketEquilibrium, marketWeightMatrix);
-		List<BigDecimal> weights = new ArrayList<>();
-		weights.add(new BigDecimal(30));
-		weights.add(new BigDecimal(20));
-		weights.add(new BigDecimal(25));
-		weights.add(new BigDecimal(25));
-		bl.addViewWithBalancedConfidence(weights, 0.26);
-		
-/*		System.out.println("--------------Asset Return Matrix---------------------");
-		System.out.println(bl.getAssetReturns());
-*/		System.out.println("--------------Asset Weights---------------------");
-		BasicMatrix finalAssetWeights = bl.getAssetWeights();
-		LinkedHashMap<String, String> assetETFMap = getassetETFMap();
-		LinkedHashMap<String, Double> assetClassWiseWeight = new LinkedHashMap<>();
-		long i = 0;
-		for(String assetClass:assetETFMap.keySet()){
-			assetClassWiseWeight.put(assetClass, finalAssetWeights.doubleValue(i));
-		}
-		Portfolio portfolio = new Portfolio(30000);
-		Map<String,Portfolio> map = portfolio.buildPortfolio(assetETFMap, assetClassWiseWeight);
-		System.out.println("Till Here");
-		return map;
 		
 	}
 	
-	double[][] getMarketWeight(){
-		double[][] marketWeight = new double[4][1];
-		double[] totalValue = new double[4]; 
-		try{
-			ArrayList<String> files = new ArrayList<>(4);
-			files.add("D:\\Wkspace\\Hacovation\\CRSP US Total Market_IndividualMarketValue.txt");
-			files.add("D:\\Wkspace\\Hacovation\\CRSP US Large Cap Value_IndividualMarketValue.txt");
-			files.add("D:\\Wkspace\\Hacovation\\CRSP US MID CAP VALUE_IndividualMarketValue.txt");
-			files.add("D:\\Wkspace\\Hacovation\\CRSP US SMALL CAP VALUE_IndividualMarketValue.txt");
-			int i = 0;
-			for(String fileName:files){
-				BufferedReader f = new BufferedReader(new FileReader(fileName));
-				String ln=null;
-				while((ln=f.readLine())!=null){
-					totalValue[i] +=Double.valueOf(ln.substring(ln.lastIndexOf("#")+1));
-				}
-				i++;
-				f.close();
-			}
-		}catch(Exception e){
-			e.printStackTrace();
-		}
-		double total=0;
-		for(double d:totalValue)
-			total+=d;
-		marketWeight[0][0]=totalValue[0]/total;
-		marketWeight[1][0]=totalValue[1]/total;
-		marketWeight[2][0]=totalValue[2]/total;
-		marketWeight[3][0]=totalValue[3]/total;
-		return marketWeight;
-	}
-	BasicMatrix getCovarianceMatrix(){
-		Collection<CalendarDateSeries<Double>> col = new ArrayList<>();
-		ReadFile readFile = new ReadFile();
-		col.add(readFile.getCalendarDataSeries("D:\\Wkspace\\Hacovation\\CRSP US Total Market.txt","A"));
-		col.add(readFile.getCalendarDataSeries("D:\\Wkspace\\Hacovation\\CRSP US Large Cap Value.txt","B"));
-		col.add(readFile.getCalendarDataSeries("D:\\Wkspace\\Hacovation\\CRSP US MID CAP VALUE.txt","C"));
-		col.add(readFile.getCalendarDataSeries("D:\\Wkspace\\Hacovation\\CRSP US SMALL CAP VALUE.txt","D"));
-		BasicMatrix covarianceMatrix = FinanceUtils.makeCovarianceMatrix(col);
-		return covarianceMatrix;
-	}
-	BasicMatrix getCovarianceMatrixOld(){
+
+/*	BasicMatrix getCovarianceMatrixOld(){
  		GoogleSymbol gs = new GoogleSymbol("AOR");
 		Collection<CalendarDateSeries<Double>> col = new ArrayList<>();
 		col.add(gs.getPriceSeries());
@@ -194,35 +118,13 @@ public class BlackLittermanImpl {
 		return lambda;
 	}
 	
-/*    public static BigDecimal getRiskAversionFactor() {
+    public static BigDecimal getRiskAversionFactor() {
         return BigDecimal.valueOf(3.07);
     }
-*/	
-	private LinkedHashMap<String,String> getassetETFMap(){
-		LinkedHashMap<String,String> assetETFMap = new LinkedHashMap<>();
-		assetETFMap.put("CRSPTM1","VTI");
-		assetETFMap.put("CRSPLC1","VTV");
-		assetETFMap.put("CRSPML1","VOE");
-		assetETFMap.put("CRSPSC1","VBR");
-		return assetETFMap;
-	}
-	private String[] getAssetsTickers(){
-		LinkedHashMap<String,String> assetETFMap = getassetETFMap();
-		String[] arr = new String[assetETFMap.keySet().size()];
-		assetETFMap.keySet().toArray(arr);
-		return arr;
-	}
-	private String[] getAssetsTickersOld(){
-		String[] tickers = new String[5];
-		tickers[0] = "AOR";
-		tickers[1] = "MDIV";
-		tickers[2] = "AOM";
-		tickers[3] = "PCEF";
-		tickers[4] = "AOA";
-		return tickers;
-	}
 	
-/*	// Source: http://stattrek.com/matrix-algebra/covariance-matrix.aspx
+	
+	
+	// Source: http://stattrek.com/matrix-algebra/covariance-matrix.aspx
 	public static void getCovarianceMatrixOld(double[][] dataArray){
 		int rows = dataArray.length;
 		// Step 1: Deviation Score
@@ -298,8 +200,8 @@ public class BlackLittermanImpl {
 			System.out.print("\n");
 		}
 	}
-*/	
-/*	public static void deprecated(){
+	
+	public static void deprecated(){
 		String[] tickers = getAssetsTickersOld();
 		
 	// Step 1. Calculate Covariance Matrix

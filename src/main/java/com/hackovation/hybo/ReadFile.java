@@ -33,5 +33,25 @@ public class ReadFile {
 		}
 		return series;
 	}
+	public Double getETFPriceForDate(String path,String symbol,Date date){
+		Double price = new Double(0);
+		try{
+			BufferedReader br = new BufferedReader(new FileReader(new File(path)));
+			String line = null;
+			while((line=br.readLine())!=null){
+				String[] data = line.split("###");
+				DateFormat dateFormat = DateFormat.getDateInstance();
+				Date dateKey = dateFormat.parse(data[0]);
+				if(data.equals(dateKey)){
+					NumberFormat numberFormat = NumberFormat.getInstance(java.util.Locale.US);
+					Number value = numberFormat.parse(data[4]);
+					price = value.doubleValue();
+				}
+			}
+		}catch(Exception e){
+			e.printStackTrace();
+		}
+		return price;
+	}
 
 }

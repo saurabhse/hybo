@@ -1,0 +1,2 @@
+drop table PORTFOLIO;
+create table PORTFOLIO(ID integer not null auto_increment,CLIENT_ID integer,INVESTMENT decimal,ETF varchar(20),NUMBER_OF_ETF integer,cost decimal,weight integer, PRIMARY KEY(ID));
