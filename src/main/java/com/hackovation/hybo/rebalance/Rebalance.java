@@ -16,7 +16,8 @@ public interface Rebalance {
 		Map<Portfolio,List<Allocation>> map = new HashMap<>();
 		for(Portfolio portfolio:list){
 			InvestorProfile investorProfile = portfolio.getInvestorProfile();
-			map.put(portfolio, portfolio.getAllocations());
+			if(portfolio.getAllocations().size()>0)
+				map.put(portfolio, portfolio.getAllocations());
 		}
 	return map;
 }

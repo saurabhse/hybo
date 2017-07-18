@@ -76,13 +76,12 @@ public class PortfolioServiceImpl implements PortfolioService{
 		System.out.println("--------------Asset Weights Calculation Started "+clientId);
 		BasicMatrix finalAssetWeights = bl.getAssetWeights();
 		System.out.println("--------------Asset Weights "+finalAssetWeights);
-		LinkedHashMap<String, String> assetETFMap = getassetETFMap();
 		LinkedHashMap<String, Double> assetClassWiseWeight = new LinkedHashMap<>();
 		long i = 0;
-		for(String assetClass:assetETFMap.keySet()){
+		for(String assetClass:indexToEtfMap.keySet()){
 			assetClassWiseWeight.put(assetClass, finalAssetWeights.doubleValue(i++));
 		}
-		Map<String,Portfolio> map = buildPortfolio(30000,assetETFMap, assetClassWiseWeight,clientId,dummy);
+		Map<String,Portfolio> map = buildPortfolio(30000,assetClassWiseWeight,clientId,dummy);
 		System.out.println("Building Portfolio Done "+clientId);
 		return map;		
 	}
@@ -151,14 +150,14 @@ public class PortfolioServiceImpl implements PortfolioService{
 		BasicMatrix covarianceMatrix = FinanceUtils.makeCovarianceMatrix(col);
 		return covarianceMatrix;
 	}
-	public Map<String,Portfolio> buildPortfolio(double investment,LinkedHashMap<String,String> assetClassETFMap,LinkedHashMap<String, Double> assetClassWiseWeight,String clientId,boolean dummy){
+	public Map<String,Portfolio> buildPortfolio(double investment,LinkedHashMap<String, Double> assetClassWiseWeight,String clientId,boolean dummy){
 		Portfolio portfolio = new Portfolio();
 		List<Allocation> allocationList = new ArrayList<>();
 		Map<String, Portfolio> portfolioMap = new HashMap<>();
-		for(String assetClass:assetClassETFMap.keySet()){
+		for(String assetClass:indexToEtfMap.keySet()){
 			Allocation allocation = new Allocation();
 			Fund fund = new Fund();
-	 		GoogleSymbol gs = new GoogleSymbol(assetClassETFMap.get(assetClass));
+	 		GoogleSymbol gs = new GoogleSymbol(indexToEtfMap.get(assetClass));
 	 		List<Data> dataList = gs.getHistoricalPrices();
 	 		Double cost = investment*assetClassWiseWeight.get(assetClass);
 	 		if(dataList != null && dataList.size()>0){
@@ -170,7 +169,7 @@ public class PortfolioServiceImpl implements PortfolioService{
 	 			allocation.setCostPrice(allocation.getQuantity()*perIndexCost);
 	 			allocation.setInvestment(investment);
 	 			allocation.setPercentage(assetClassWiseWeight.get(assetClass).intValue());
-	 			fund.setTicker(indexToEtfMap.get(assetClassETFMap.get(assetClass)));
+	 			fund.setTicker(indexToEtfMap.get(assetClass));
 	 			allocation.setFund(fund);
 	 			allocationList.add(allocation);
 	 		}

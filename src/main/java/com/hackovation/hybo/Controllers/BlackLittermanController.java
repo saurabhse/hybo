@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.hack17.hybo.domain.Portfolio;
+import com.hackovation.hybo.rebalance.Rebalance;
 import com.hackovation.hybo.services.PortfolioService;
 
 @RestController
@@ -18,12 +19,19 @@ public class BlackLittermanController {
 	@Autowired
 	PortfolioService portfolioService;
 	
+	@Autowired
+	Rebalance rebalance;
+	
 	@RequestMapping(method=RequestMethod.GET,value="/getPortfolio")
 	public @ResponseBody Map<String,Portfolio> getPortfolio(@RequestParam(name="clientId") String clientId){
 		return portfolioService.buildPortfolio(clientId,false);
-		
-		
 	}
+
+	@RequestMapping(method=RequestMethod.GET,value="/rebalance")
+	public void rebalancePortfolio(){
+		 rebalance.rebalance();
+	}
+	
 	
 
 /*	BasicMatrix getCovarianceMatrixOld(){

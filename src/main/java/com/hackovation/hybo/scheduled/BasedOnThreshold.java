@@ -19,6 +19,7 @@ import com.hack17.hybo.domain.InvestorProfile;
 import com.hack17.hybo.domain.Portfolio;
 import com.hack17.hybo.repository.PortfolioRepository;
 import com.hackovation.hybo.ReadFile;
+import com.hackovation.hybo.Util.EtfIndexMap;
 import com.hackovation.hybo.Util.PathsAsPerAssetClass;
 import com.hackovation.hybo.rebalance.Rebalance;
 
@@ -28,19 +29,30 @@ public class BasedOnThreshold implements Rebalance{
 	@Autowired
 	PortfolioRepository portfolioRepository;
 	final int threshold = 15;
-	
+	Map<String,String> indexToEtfMap;
+	Map<String,String> EtfToIndexMap;
 	@Override
 //	@Scheduled(cron="0 0/1 * 1/1 * *")
 	public void rebalance() {
 		System.out.println("Cron Running");
+		System.out.println("Rebalancing Started!!!");
+		EtfToIndexMap = EtfIndexMap.getEtfToIndexMapping();
+		indexToEtfMap = EtfIndexMap.getIndexToEtfMapping();
+
 		List<Portfolio> listOfPortfolios =  portfolioRepository.getAllPortfolios();
+		System.out.println("Fetched all portfolios... "+listOfPortfolios.size());
+		System.out.println("Grouping Allocation based on portfolio..");
 		Map<Portfolio,List<Allocation>> groupWisePortfolio = groupByUserId(listOfPortfolios);
+		
 		Set<Entry<Portfolio,List<Allocation>>> entrySet = groupWisePortfolio.entrySet();
 		for(Entry<Portfolio,List<Allocation>> entry:entrySet){
 			Portfolio portfolio = entry.getKey();
 			List<Allocation> portfolioList = entry.getValue();
+			System.out.println("Rebalancing ... "+portfolio);
 			rebalancePortfolio(portfolio,portfolioList);
 		}
+		
+		System.out.println("Rebalancing Done !!! ");
 		
 	}
 	
@@ -106,11 +118,11 @@ public class BasedOnThreshold implements Rebalance{
 			
 			
 		}catch(Exception e){
-			
+			e.printStackTrace();
 		}
 	}
 	
-	private Map<String,Integer> getETFWiseWeight(List<Allocation> allocationList){
+	private Map<String,Integer> getETFWiseWeight(List<Allocation> allocationList) throws Exception{
 		Calendar cal = Calendar.getInstance();
 		cal.set(Calendar.HOUR, 0);
 		cal.set(Calendar.MINUTE, 0);
@@ -123,9 +135,12 @@ public class BasedOnThreshold implements Rebalance{
 		Map<String,Double> etfWisePrice = new HashMap<>();
 		double totalPrice = 0;
 		for(Allocation allocation:allocationList){
-			String filePath = paths.get(allocation.getFund().getTicker());
+			String filePath = paths.get(EtfToIndexMap.get(allocation.getFund().getTicker()));
 			double price = 0;
 			price = readFile.getETFPriceForDate(filePath,allocation.getFund().getTicker(),date);
+			if(price==0){
+				throw new Exception("Data is not present for today!!");
+			}
 			etfWisePrice.put(allocation.getFund().getTicker(),price);
 			totalPrice+=price;
 		}
