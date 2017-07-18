@@ -2,9 +2,9 @@ package com.hackovation.hybo.services;
 
 import java.util.Map;
 
-import com.hackovation.hybo.entities.PortfolioEntity;
+import com.hack17.hybo.domain.Portfolio;
 
 public interface PortfolioService {
 
-	public Map<String,PortfolioEntity> buildPortfolio(String clientId);
+	public Map<String,Portfolio> buildPortfolio(String clientId,boolean dummy);
 }

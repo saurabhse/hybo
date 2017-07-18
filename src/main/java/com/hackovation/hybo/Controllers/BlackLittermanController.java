@@ -1,43 +1,14 @@
 package com.hackovation.hybo.Controllers;
 
-import java.io.BufferedReader;
-import java.io.FileReader;
-import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.TreeSet;
-
-import javax.websocket.server.PathParam;
-
-import org.algo.array.Array2D;
-import org.algo.finance.FinanceUtils;
-import org.algo.finance.data.GoogleSymbol;
-import org.algo.finance.data.GoogleSymbol.Data;
-import org.algo.finance.portfolio.BlackLittermanModel;
-import org.algo.finance.portfolio.FinancePortfolio;
-import org.algo.finance.portfolio.MarketEquilibrium;
-import org.algo.matrix.BasicMatrix;
-import org.algo.matrix.BigMatrix;
-import org.algo.series.CalendarDateSeries;
-import org.algo.type.CalendarDate;
-import org.algo.type.CalendarDateUnit;
-import org.assertj.core.util.Arrays;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.hackovation.hybo.ReadFile;
-import com.hackovation.hybo.bean.dao.TestDaoInterface;
-import com.hackovation.hybo.entities.PortfolioEntity;
+import com.hack17.hybo.domain.Portfolio;
 import com.hackovation.hybo.services.PortfolioService;
 
 @RestController
@@ -48,8 +19,8 @@ public class BlackLittermanController {
 	PortfolioService portfolioService;
 	
 	@RequestMapping(method=RequestMethod.GET,value="/getPortfolio")
-	public @ResponseBody Map<String,PortfolioEntity> getPortfolio(@RequestParam(name="clientId") String clientId){
-		return portfolioService.buildPortfolio(clientId);
+	public @ResponseBody Map<String,Portfolio> getPortfolio(@RequestParam(name="clientId") String clientId){
+		return portfolioService.buildPortfolio(clientId,false);
 		
 		
 	}

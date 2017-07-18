@@ -21,32 +21,32 @@ import org.algo.matrix.BigMatrix;
 import org.algo.series.CalendarDateSeries;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.hack17.hybo.domain.Allocation;
+import com.hack17.hybo.domain.Fund;
+import com.hack17.hybo.domain.InvestorProfile;
+import com.hack17.hybo.domain.Portfolio;
+import com.hack17.hybo.repository.PortfolioRepository;
 import com.hackovation.hybo.ReadFile;
-import com.hackovation.hybo.bean.dao.PortfolioDao;
-import com.hackovation.hybo.entities.PortfolioEntity;
-import com.hackovation.hybo.enums.ETFEnum;
+import com.hackovation.hybo.Util.EtfIndexMap;
 import com.hackovation.hybo.services.PortfolioService;
 
 @Service
+@Transactional
 public class PortfolioServiceImpl implements PortfolioService{
 
 	@Autowired
-	PortfolioDao portfolioDao;
-	
+	PortfolioRepository portfolioRepository;
+
+	Map<String,String> indexToEtfMap;
+	Map<String,String> EtfToIndexMap;
 
 	@Override
-	public Map<String,PortfolioEntity> buildPortfolio(String clientId) {
+	public Map<String,Portfolio> buildPortfolio(String clientId,boolean dummy) {
 		System.out.println("Building Portfolio Started "+clientId);
-		
-		System.out.println(" Verifying Client ID "+clientId);
-		Long records = portfolioDao.fetchPortfolioForClientId(Integer.valueOf(clientId));
-		if(records.intValue() != 0){
-			System.out.println("Records for given client id already exists. ");
-			return  new HashMap<>();
-		}
+		EtfToIndexMap = EtfIndexMap.getEtfToIndexMapping();
+		indexToEtfMap = EtfIndexMap.getIndexToEtfMapping();
 		// Step 1. Calculate Covariance Matrix
 		BasicMatrix covarianceMatrix = getCovarianceMatrix();
 		System.out.println("--------------Covariance Matrix Calculation "+clientId);
@@ -75,13 +75,14 @@ public class PortfolioServiceImpl implements PortfolioService{
 */	
 		System.out.println("--------------Asset Weights Calculation Started "+clientId);
 		BasicMatrix finalAssetWeights = bl.getAssetWeights();
+		System.out.println("--------------Asset Weights "+finalAssetWeights);
 		LinkedHashMap<String, String> assetETFMap = getassetETFMap();
 		LinkedHashMap<String, Double> assetClassWiseWeight = new LinkedHashMap<>();
 		long i = 0;
 		for(String assetClass:assetETFMap.keySet()){
-			assetClassWiseWeight.put(assetClass, finalAssetWeights.doubleValue(i));
+			assetClassWiseWeight.put(assetClass, finalAssetWeights.doubleValue(i++));
 		}
-		Map<String,PortfolioEntity> map = buildPortfolio(30000,assetETFMap, assetClassWiseWeight,clientId);
+		Map<String,Portfolio> map = buildPortfolio(30000,assetETFMap, assetClassWiseWeight,clientId,dummy);
 		System.out.println("Building Portfolio Done "+clientId);
 		return map;		
 	}
@@ -143,18 +144,20 @@ public class PortfolioServiceImpl implements PortfolioService{
 	BasicMatrix getCovarianceMatrix(){
 		Collection<CalendarDateSeries<Double>> col = new ArrayList<>();
 		ReadFile readFile = new ReadFile();
-		col.add(readFile.getCalendarDataSeries("D:\\Wkspace\\Hacovation\\CRSP US Total Market.txt",ETFEnum.valueOf("CRSPTM1").name()));
-		col.add(readFile.getCalendarDataSeries("D:\\Wkspace\\Hacovation\\CRSP US Large Cap Value.txt",ETFEnum.valueOf("CRSPLC1").name()));
-		col.add(readFile.getCalendarDataSeries("D:\\Wkspace\\Hacovation\\CRSP US MID CAP VALUE.txt",ETFEnum.valueOf("CRSPML1").name()));
-		col.add(readFile.getCalendarDataSeries("D:\\Wkspace\\Hacovation\\CRSP US SMALL CAP VALUE.txt",ETFEnum.valueOf("CRSPSC1").name()));
+		col.add(readFile.getCalendarDataSeries("D:\\Wkspace\\Hacovation\\CRSP US Total Market.txt","CRSPTM1"));
+		col.add(readFile.getCalendarDataSeries("D:\\Wkspace\\Hacovation\\CRSP US Large Cap Value.txt","CRSPLC1"));
+		col.add(readFile.getCalendarDataSeries("D:\\Wkspace\\Hacovation\\CRSP US MID CAP VALUE.txt","CRSPML1"));
+		col.add(readFile.getCalendarDataSeries("D:\\Wkspace\\Hacovation\\CRSP US SMALL CAP VALUE.txt","CRSPSC1"));
 		BasicMatrix covarianceMatrix = FinanceUtils.makeCovarianceMatrix(col);
 		return covarianceMatrix;
 	}
-	public Map<String,PortfolioEntity> buildPortfolio(double investment,LinkedHashMap<String,String> assetClassETFMap,LinkedHashMap<String, Double> assetClassWiseWeight,String clientId){
-		
-		Map<String, PortfolioEntity> portfolioMap = new HashMap<>();
+	public Map<String,Portfolio> buildPortfolio(double investment,LinkedHashMap<String,String> assetClassETFMap,LinkedHashMap<String, Double> assetClassWiseWeight,String clientId,boolean dummy){
+		Portfolio portfolio = new Portfolio();
+		List<Allocation> allocationList = new ArrayList<>();
+		Map<String, Portfolio> portfolioMap = new HashMap<>();
 		for(String assetClass:assetClassETFMap.keySet()){
-			PortfolioEntity portfolio = new PortfolioEntity();
+			Allocation allocation = new Allocation();
+			Fund fund = new Fund();
 	 		GoogleSymbol gs = new GoogleSymbol(assetClassETFMap.get(assetClass));
 	 		List<Data> dataList = gs.getHistoricalPrices();
 	 		Double cost = investment*assetClassWiseWeight.get(assetClass);
@@ -162,17 +165,21 @@ public class PortfolioServiceImpl implements PortfolioService{
 	 			Data data = dataList.get(0);
 	 			double perIndexCost = data.getPrice();
 	 			NumberFormat nf = NumberFormat.getInstance();
-	 			System.out.println(cost +" --- "+perIndexCost);
-	 			portfolio.setNumber(Double.valueOf((cost/perIndexCost)).intValue());
-	 			portfolio.setCost(cost=portfolio.getNumber()*perIndexCost);
-	 			portfolio.setETF(assetClassETFMap.get(assetClass));
-	 			portfolio.setInvestment(investment);
-	 			portfolio.setClientId(Integer.valueOf(clientId));
-	 			portfolio.setWeight(assetClassWiseWeight.get(assetClass).intValue());
-	 			portfolioDao.addPortfolio(portfolio);
-	 			portfolioMap.put(assetClass, portfolio);
+	 			System.out.println("Asset Class: "+assetClass+" Weight: "+assetClassWiseWeight.get(assetClass)+" Cost: "+cost +" PerIndexCost: "+perIndexCost);
+	 			allocation.setQuantity(Double.valueOf((cost/perIndexCost)).intValue());
+	 			allocation.setCostPrice(allocation.getQuantity()*perIndexCost);
+	 			allocation.setInvestment(investment);
+	 			allocation.setPercentage(assetClassWiseWeight.get(assetClass).intValue());
+	 			fund.setTicker(indexToEtfMap.get(assetClassETFMap.get(assetClass)));
+	 			allocation.setFund(fund);
+	 			allocationList.add(allocation);
 	 		}
+ 			portfolio.setAllocations(allocationList);
 		}
+		InvestorProfile profile = new InvestorProfile();
+		profile.setId(Long.valueOf(clientId));
+		portfolio.setInvestorProfile(profile);
+		portfolioRepository.persist(portfolio);
 		return portfolioMap;
 	}
 }

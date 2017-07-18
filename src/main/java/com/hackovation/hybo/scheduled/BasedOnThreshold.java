@@ -8,58 +8,51 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-
-import javax.persistence.EntityManager;
-
 import org.algo.finance.FinanceUtils;
 import org.algo.matrix.BasicMatrix;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+import com.hack17.hybo.domain.Allocation;
+import com.hack17.hybo.domain.InvestorProfile;
+import com.hack17.hybo.domain.Portfolio;
+import com.hack17.hybo.repository.PortfolioRepository;
 import com.hackovation.hybo.ReadFile;
 import com.hackovation.hybo.Util.PathsAsPerAssetClass;
-import com.hackovation.hybo.bean.dao.PortfolioDao;
-import com.hackovation.hybo.entities.PortfolioEntity;
-import com.hackovation.hybo.enums.ETFEnum;
 import com.hackovation.hybo.rebalance.Rebalance;
 
 @Component
 public class BasedOnThreshold implements Rebalance{
 
 	@Autowired
-	EntityManager entityManager;
-	@Autowired
-	PortfolioDao portfolioDao;
-	
+	PortfolioRepository portfolioRepository;
 	final int threshold = 15;
 	
 	@Override
-	@Scheduled(cron="0 0/1 * 1/1 * *")
+//	@Scheduled(cron="0 0/1 * 1/1 * *")
 	public void rebalance() {
 		System.out.println("Cron Running");
-		List<PortfolioEntity> listOfPortfolios =  portfolioDao.fetchAllPortfolio();
-		Map<Long,List<PortfolioEntity>> groupWisePortfolio = groupByUserId(listOfPortfolios);
-		Set<Entry<Long,List<PortfolioEntity>>> entrySet = groupWisePortfolio.entrySet();
-		for(Entry<Long,List<PortfolioEntity>> entry:entrySet){
-			long userId = entry.getKey();
-			List<PortfolioEntity> portfolioList = entry.getValue();
-			rebalancePortfolio(portfolioList);
+		List<Portfolio> listOfPortfolios =  portfolioRepository.getAllPortfolios();
+		Map<Portfolio,List<Allocation>> groupWisePortfolio = groupByUserId(listOfPortfolios);
+		Set<Entry<Portfolio,List<Allocation>>> entrySet = groupWisePortfolio.entrySet();
+		for(Entry<Portfolio,List<Allocation>> entry:entrySet){
+			Portfolio portfolio = entry.getKey();
+			List<Allocation> portfolioList = entry.getValue();
+			rebalancePortfolio(portfolio,portfolioList);
 		}
 		
 	}
 	
-	public void rebalancePortfolio(List<PortfolioEntity> actualPortfolioList){
+	public void rebalancePortfolio(Portfolio portfolio,List<Allocation> actualAllocationList){
 		try{
 			boolean rebalancePortfolio = false;
-			long userId = 0;
-			Map<ETFEnum,Integer> todaysWeight = getETFWiseWeight(actualPortfolioList);
-			for(PortfolioEntity portfolio:actualPortfolioList){
-				userId = portfolio.getClientId();
-				int actualWeight = portfolio.getWeight();
-				int today = todaysWeight.get(portfolio.getETF());
-				int diff = Math.abs(today-actualWeight);
-				int perc = (diff/actualWeight)*100;
+			Map<String,Integer> todaysWeight = getETFWiseWeight(actualAllocationList);
+			for(Allocation allocation:actualAllocationList){
+				double actualWeight = allocation.getPercentage();
+				int today = todaysWeight.get(allocation.getFund().getTicker());
+				double diff = Math.abs(today-actualWeight);
+				double perc = (diff/actualWeight)*100;
 				if(perc>=threshold){
 					rebalancePortfolio = true;
 					break;
@@ -67,27 +60,27 @@ public class BasedOnThreshold implements Rebalance{
 			}
 			if(rebalancePortfolio){
 				double totalInvestmentAsOfToday = 0;
-				for(PortfolioEntity existingPortfolio:actualPortfolioList){
-					int noOfETF = existingPortfolio.getNumber();
-					Map<ETFEnum,String> paths = PathsAsPerAssetClass.getETFPaths();
+				for(Allocation existingPortfolio:actualAllocationList){
+					int noOfETF = existingPortfolio.getQuantity();
+					Map<String,String> paths = PathsAsPerAssetClass.getETFPaths();
 					Calendar cal = Calendar.getInstance();
 					cal.set(Calendar.HOUR, 0);
 					cal.set(Calendar.MINUTE, 0);
 					cal.set(Calendar.SECOND, 0);
 					Date date = cal.getTime();
 					ReadFile readFile = new ReadFile();
-					totalInvestmentAsOfToday += noOfETF*readFile.getETFPriceForDate(paths.get(existingPortfolio.getETF()), existingPortfolio.getETF(), date);
+					totalInvestmentAsOfToday += noOfETF*readFile.getETFPriceForDate(paths.get(existingPortfolio.getFund().getTicker()), existingPortfolio.getFund().getTicker(), date);
 				}
 
 				
 				
 				
-				List<PortfolioEntity> newPortfolio = new ArrayList<>();
+				List<Allocation> newAllocationList = new ArrayList<>();
 				
-				for(PortfolioEntity existingPortfolio:actualPortfolioList){
-					int weight = todaysWeight.get(existingPortfolio.getETF());
+				for(Allocation existingAllocation:actualAllocationList){
+					int weight = todaysWeight.get(existingAllocation.getFund().getTicker());
 					double etfWiseInvestment = (totalInvestmentAsOfToday*weight)/100;
-					Map<ETFEnum,String> paths = PathsAsPerAssetClass.getETFPaths();
+					Map<String,String> paths = PathsAsPerAssetClass.getETFPaths();
 
 					Calendar cal = Calendar.getInstance();
 					cal.set(Calendar.HOUR, 0);
@@ -95,22 +88,19 @@ public class BasedOnThreshold implements Rebalance{
 					cal.set(Calendar.SECOND, 0);
 					Date date = cal.getTime();
 					ReadFile readFile = new ReadFile();
-					double costPerETF = readFile.getETFPriceForDate(paths.get(existingPortfolio.getETF()), existingPortfolio.getETF(), date);
+					double costPerETF = readFile.getETFPriceForDate(paths.get(existingAllocation.getFund().getTicker()), existingAllocation.getFund().getTicker(), date);
 					int noOfEtf = Double.valueOf(etfWiseInvestment/costPerETF).intValue();
-					double cost = noOfEtf*costPerETF;
+//					double cost = noOfEtf*costPerETF;
 					
-					PortfolioEntity portfolio = new PortfolioEntity();
-					portfolio.setClientId(userId);
-					portfolio.setCost(cost);
-					portfolio.setClientId(userId);
-					portfolio.setInvestment(totalInvestmentAsOfToday);
-					portfolio.setWeight(weight);
-					newPortfolio.add(portfolio);
+					Allocation allocation = new Allocation();
+					allocation.setCostPrice(costPerETF);
+					allocation.setInvestment(totalInvestmentAsOfToday);
+					allocation.setInvestment(totalInvestmentAsOfToday);
+					allocation.setPercentage(weight);
+					newAllocationList.add(allocation);
 				}
-				if(newPortfolio.size()>0){
-					portfolioDao.deletePortfolio(userId);
-					newPortfolio.forEach(portfolio -> portfolioDao.addPortfolio(portfolio));
-				}
+				portfolio.setAllocations(newAllocationList);
+				portfolioRepository.merge(portfolio);
 				
 			}
 			
@@ -120,7 +110,7 @@ public class BasedOnThreshold implements Rebalance{
 		}
 	}
 	
-	private Map<ETFEnum,Integer> getETFWiseWeight(List<PortfolioEntity> portfolioList){
+	private Map<String,Integer> getETFWiseWeight(List<Allocation> allocationList){
 		Calendar cal = Calendar.getInstance();
 		cal.set(Calendar.HOUR, 0);
 		cal.set(Calendar.MINUTE, 0);
@@ -128,21 +118,21 @@ public class BasedOnThreshold implements Rebalance{
 		Date date = cal.getTime();
 		ReadFile readFile = new ReadFile();
 
-		Map<ETFEnum, Integer> etfWiseWeight = new HashMap<>();
-		Map<ETFEnum,String> paths = PathsAsPerAssetClass.getETFPaths();
+		Map<String, Integer> etfWiseWeight = new HashMap<>();
+		Map<String,String> paths = PathsAsPerAssetClass.getETFPaths();
 		Map<String,Double> etfWisePrice = new HashMap<>();
 		double totalPrice = 0;
-		for(PortfolioEntity portfolio:portfolioList){
-			String filePath = paths.get(ETFEnum.valueOf(portfolio.getETF()));
+		for(Allocation allocation:allocationList){
+			String filePath = paths.get(allocation.getFund().getTicker());
 			double price = 0;
-			price = readFile.getETFPriceForDate(filePath,ETFEnum.valueOf(portfolio.getETF()).name(),date);
-			etfWisePrice.put(ETFEnum.valueOf(portfolio.getETF()).name(),price);
+			price = readFile.getETFPriceForDate(filePath,allocation.getFund().getTicker(),date);
+			etfWisePrice.put(allocation.getFund().getTicker(),price);
 			totalPrice+=price;
 		}
 		Set<Entry<String, Double>> entrySet = etfWisePrice.entrySet();
 		for(Entry<String,Double> entry:entrySet){
 			Double weight = entry.getValue()/totalPrice;
-			etfWiseWeight.put(ETFEnum.valueOf(entry.getKey()), weight.intValue());
+			etfWiseWeight.put(entry.getKey(), weight.intValue());
 		}
 		
 		return etfWiseWeight;
