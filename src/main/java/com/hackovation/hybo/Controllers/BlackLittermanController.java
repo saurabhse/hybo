@@ -1,5 +1,9 @@
 package com.hackovation.hybo.Controllers;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -23,7 +27,14 @@ public class BlackLittermanController {
 	Rebalance rebalance;
 	
 	@RequestMapping(method=RequestMethod.GET,value="/getPortfolio")
-	public @ResponseBody Map<String,Portfolio> getPortfolio(@RequestParam(name="clientId") String clientId){
+	public @ResponseBody Map<String,Portfolio> getPortfolio(@RequestParam(name="clientId") String clientId) throws Exception{
+		ClassLoader cl = getClass().getClassLoader();
+		File file = new File(cl.getResource("CRSP_US_Total_Market_IndividualMarketValue.txt").getFile());
+		BufferedReader f = new BufferedReader(new FileReader(file));
+		String ln=null;
+		while((ln=f.readLine())!=null){
+			System.out.println(ln);;
+		}
 		return portfolioService.buildPortfolio(clientId,false);
 	}
 

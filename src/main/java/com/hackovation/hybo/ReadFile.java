@@ -15,7 +15,9 @@ public class ReadFile {
 	public CalendarDateSeries<Double> getCalendarDataSeries(String path,String symbol){
 		CalendarDateSeries<Double> series = new CalendarDateSeries<Double>(CalendarDateUnit.DAY).name(symbol);
 		try{
-			BufferedReader br = new BufferedReader(new FileReader(new File(path)));
+			ClassLoader cl = getClass().getClassLoader();
+			File file = new File(cl.getResource(path).getFile());
+			BufferedReader br = new BufferedReader(new FileReader(file));
 			String line = null;
 			while((line=br.readLine())!=null){
 				String[] data = line.split("###");

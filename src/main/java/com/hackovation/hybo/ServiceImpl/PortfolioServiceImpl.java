@@ -1,6 +1,7 @@
 package com.hackovation.hybo.ServiceImpl;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileReader;
 import java.math.BigDecimal;
 import java.text.NumberFormat;
@@ -64,10 +65,10 @@ public class PortfolioServiceImpl implements PortfolioService{
 		MarketEquilibrium marketEquilibrium = new MarketEquilibrium(tickers, covarianceMatrix, lambda);
 		BlackLittermanModel bl  = new BlackLittermanModel(marketEquilibrium, marketWeightMatrix);
 		List<BigDecimal> weights = new ArrayList<>();
-		weights.add(new BigDecimal(30));
-		weights.add(new BigDecimal(20));
-		weights.add(new BigDecimal(25));
-		weights.add(new BigDecimal(25));
+		weights.add(new BigDecimal(3));
+		weights.add(new BigDecimal(2));
+		weights.add(new BigDecimal(2));
+		weights.add(new BigDecimal(2));
 		bl.addViewWithBalancedConfidence(weights, 0.26);
 		
 /*		System.out.println("--------------Asset Return Matrix---------------------");
@@ -114,13 +115,15 @@ public class PortfolioServiceImpl implements PortfolioService{
 		double[] totalValue = new double[4]; 
 		try{
 			ArrayList<String> files = new ArrayList<>(4);
-			files.add("D:\\Wkspace\\Hacovation\\CRSP US Total Market_IndividualMarketValue.txt");
-			files.add("D:\\Wkspace\\Hacovation\\CRSP US Large Cap Value_IndividualMarketValue.txt");
-			files.add("D:\\Wkspace\\Hacovation\\CRSP US MID CAP VALUE_IndividualMarketValue.txt");
-			files.add("D:\\Wkspace\\Hacovation\\CRSP US SMALL CAP VALUE_IndividualMarketValue.txt");
+			files.add("CRSP_US_Total_Market_IndividualMarketValue.txt");
+			files.add("CRSP_US_Large_Cap_Value_IndividualMarketValue.txt");
+			files.add("CRSP_US_MID_CAP_VALUE_IndividualMarketValue.txt");
+			files.add("CRSP_US_SMALL_CAP_VALUE_IndividualMarketValue.txt");
 			int i = 0;
+			ClassLoader cl = getClass().getClassLoader();
 			for(String fileName:files){
-				BufferedReader f = new BufferedReader(new FileReader(fileName));
+				File file = new File(cl.getResource(fileName).getFile());
+				BufferedReader f = new BufferedReader(new FileReader(file));
 				String ln=null;
 				while((ln=f.readLine())!=null){
 					totalValue[i] +=Double.valueOf(ln.substring(ln.lastIndexOf("#")+1));
@@ -143,10 +146,10 @@ public class PortfolioServiceImpl implements PortfolioService{
 	BasicMatrix getCovarianceMatrix(){
 		Collection<CalendarDateSeries<Double>> col = new ArrayList<>();
 		ReadFile readFile = new ReadFile();
-		col.add(readFile.getCalendarDataSeries("D:\\Wkspace\\Hacovation\\CRSP US Total Market.txt","CRSPTM1"));
-		col.add(readFile.getCalendarDataSeries("D:\\Wkspace\\Hacovation\\CRSP US Large Cap Value.txt","CRSPLC1"));
-		col.add(readFile.getCalendarDataSeries("D:\\Wkspace\\Hacovation\\CRSP US MID CAP VALUE.txt","CRSPML1"));
-		col.add(readFile.getCalendarDataSeries("D:\\Wkspace\\Hacovation\\CRSP US SMALL CAP VALUE.txt","CRSPSC1"));
+		col.add(readFile.getCalendarDataSeries("CRSP_US_Total_Market.txt","CRSPTM1"));
+		col.add(readFile.getCalendarDataSeries("CRSP_US_Large_Cap_Value.txt","CRSPLC1"));
+		col.add(readFile.getCalendarDataSeries("CRSP_US_MID_CAP_VALUE.txt","CRSPML1"));
+		col.add(readFile.getCalendarDataSeries("CRSP_US_SMALL_CAP_VALUE.txt","CRSPSC1"));
 		BasicMatrix covarianceMatrix = FinanceUtils.makeCovarianceMatrix(col);
 		return covarianceMatrix;
 	}
