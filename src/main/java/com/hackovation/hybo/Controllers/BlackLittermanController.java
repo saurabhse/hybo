@@ -33,7 +33,7 @@ public class BlackLittermanController {
 		BufferedReader f = new BufferedReader(new FileReader(file));
 		String ln=null;
 		while((ln=f.readLine())!=null){
-			System.out.println(ln);;
+			//System.out.println(ln);;
 		}
 		return portfolioService.buildPortfolio(clientId,false);
 	}
@@ -41,6 +41,11 @@ public class BlackLittermanController {
 	@RequestMapping(method=RequestMethod.GET,value="/rebalance")
 	public void rebalancePortfolio(){
 		 rebalance.rebalance();
+	}
+	
+	@RequestMapping(method=RequestMethod.GET,value="/deleteAll")
+	public void deleteAllPortfolio(){
+		portfolioService.deleteAllPortfolio();
 	}
 	
 	

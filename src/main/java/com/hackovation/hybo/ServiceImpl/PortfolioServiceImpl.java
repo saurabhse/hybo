@@ -7,10 +7,13 @@ import java.math.BigDecimal;
 import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+
+import javax.persistence.EntityTransaction;
 
 import org.algo.finance.FinanceUtils;
 import org.algo.finance.data.GoogleSymbol;
@@ -28,7 +31,9 @@ import com.hack17.hybo.domain.Allocation;
 import com.hack17.hybo.domain.Fund;
 import com.hack17.hybo.domain.InvestorProfile;
 import com.hack17.hybo.domain.Portfolio;
+import com.hack17.hybo.domain.RiskTolerance;
 import com.hack17.hybo.repository.PortfolioRepository;
+import com.hackovation.hybo.AllocationType;
 import com.hackovation.hybo.ReadFile;
 import com.hackovation.hybo.Util.EtfIndexMap;
 import com.hackovation.hybo.services.PortfolioService;
@@ -43,6 +48,7 @@ public class PortfolioServiceImpl implements PortfolioService{
 	Map<String,String> indexToEtfMap;
 	Map<String,String> EtfToIndexMap;
 
+	
 	@Override
 	public Map<String,Portfolio> buildPortfolio(String clientId,boolean dummy) {
 		System.out.println("Building Portfolio Started "+clientId);
@@ -65,10 +71,10 @@ public class PortfolioServiceImpl implements PortfolioService{
 		MarketEquilibrium marketEquilibrium = new MarketEquilibrium(tickers, covarianceMatrix, lambda);
 		BlackLittermanModel bl  = new BlackLittermanModel(marketEquilibrium, marketWeightMatrix);
 		List<BigDecimal> weights = new ArrayList<>();
-		weights.add(new BigDecimal(3));
-		weights.add(new BigDecimal(2));
-		weights.add(new BigDecimal(2));
-		weights.add(new BigDecimal(2));
+		weights.add(new BigDecimal(0));
+		weights.add(new BigDecimal(0));
+		weights.add(new BigDecimal(0));
+		weights.add(new BigDecimal(0));
 		bl.addViewWithBalancedConfidence(weights, 0.26);
 		
 /*		System.out.println("--------------Asset Return Matrix---------------------");
@@ -157,6 +163,7 @@ public class PortfolioServiceImpl implements PortfolioService{
 		Portfolio portfolio = new Portfolio();
 		List<Allocation> allocationList = new ArrayList<>();
 		Map<String, Portfolio> portfolioMap = new HashMap<>();
+		Date date = new Date();
 		for(String assetClass:indexToEtfMap.keySet()){
 			Allocation allocation = new Allocation();
 			Fund fund = new Fund();
@@ -171,17 +178,31 @@ public class PortfolioServiceImpl implements PortfolioService{
 	 			allocation.setQuantity(Double.valueOf((cost/perIndexCost)).intValue());
 	 			allocation.setCostPrice(allocation.getQuantity()*perIndexCost);
 	 			allocation.setInvestment(investment);
-	 			allocation.setPercentage(assetClassWiseWeight.get(assetClass).intValue());
+	 			allocation.setPercentage(assetClassWiseWeight.get(assetClass)*100);
+	 			allocation.setType(AllocationType.EQ.name());
+	 			allocation.setTransactionDate(date);
+	 			allocation.setIsActive("Y");
 	 			fund.setTicker(indexToEtfMap.get(assetClass));
 	 			allocation.setFund(fund);
 	 			allocationList.add(allocation);
 	 		}
  			portfolio.setAllocations(allocationList);
 		}
+		//System.out.println(portfolioRepository.getPortfolio(1));
+		
 		InvestorProfile profile = new InvestorProfile();
-		profile.setId(Long.valueOf(clientId));
+		profile.setRiskTolerance(RiskTolerance.MEDIUM);
 		portfolio.setInvestorProfile(profile);
 		portfolioRepository.persist(portfolio);
+		
+		
 		return portfolioMap;
+	}
+
+	@Override
+	public void deleteAllPortfolio() {
+		List<Portfolio> listOfPortfolios =  portfolioRepository.getAllPortfolios();
+		
+		for(Portfolio port:listOfPortfolios)portfolioRepository.delete(port);
 	}
 }
