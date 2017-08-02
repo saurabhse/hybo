@@ -23,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.hack17.hybo.domain.Allocation;
 import com.hack17.hybo.domain.InvestorProfile;
+import com.hack17.hybo.domain.MarketStatus;
 import com.hack17.hybo.domain.Portfolio;
 import com.hack17.hybo.domain.RiskTolerance;
 import com.hack17.hybo.repository.PortfolioRepository;
@@ -98,7 +99,7 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 			double initialEQSum = getTotalValue(eqAllocationList);
 		}
 		
-		rebalanceEquity(portfolio,eqAllocationList);
+		rebalanceEquity(portfolio,eqAllocationList,bondAllocationList);
 		
 	}
 	
@@ -139,90 +140,184 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 		return sum;
 	}
 	
-	public void rebalanceEquity(Portfolio portfolio, List<Allocation> equityAllocationList){
-		if(checkEligibilityForEQRebalancing(portfolio, equityAllocationList)){
-			HashMap<String,Double> existPercMap = new HashMap<>();
-			HashMap<String, Double> newPercMap = new HashMap<>();
-			HashMap<String, Double> newPricesPerETF = new HashMap<>();
-			double totalValue = 0;
-			for(Allocation existingAllocation:equityAllocationList){
-				int noOfETF = existingAllocation.getQuantity();
-				Map<String,String> paths = PathsAsPerAssetClass.getETFPaths();
-				Calendar cal = Calendar.getInstance();
-				cal.set(Calendar.HOUR, 0);
-				cal.set(Calendar.MINUTE, 0);
-				cal.set(Calendar.SECOND, 0);
-				Date date = cal.getTime();
-		 		GoogleSymbol gs = new GoogleSymbol(existingAllocation.getFund().getTicker());
-		 		List<Data> dataList = gs.getHistoricalPrices();
-		 		Data data = dataList.get(0);
-/*	 			double perIndexCost = data.getPrice();
-	 			ReadFile readFile = new ReadFile();
-*/				double latestPrice = data.getPrice();
-				double cost = latestPrice*existingAllocation.getQuantity();
-				totalValue +=cost;
-				newPercMap.put(existingAllocation.getFund().getTicker(), cost);
-				newPricesPerETF.put(existingAllocation.getFund().getTicker(), latestPrice);
-				existPercMap.put(existingAllocation.getFund().getTicker(), existingAllocation.getPercentage());
-			}
-			newPercMap = updatePercentagesAsPerLatestCost(newPercMap, totalValue);
-			List<Allocation> newAllocationList = new ArrayList<>();
-			
-			Date currentDate = new Date();
-			double newInvestment = 0.0;
-			for(Allocation allocation:equityAllocationList){
-				Allocation newAllocation = copyAllocationInNewObject(allocation, currentDate);
-				String ticker = allocation.getFund().getTicker();
-				double existingPerc = existPercMap.get(ticker);
-				double newPerc = newPercMap.get(ticker);
-				double adjustment = checkEligibilityForAssetClassRebalanncing(existingPerc,newPerc);
-				if(adjustment == 0){
-					newAllocationList.add(newAllocation);
-					allocation.setIsActive("N");
-					newInvestment+=newAllocation.getInvestment();
-				}
-				else if (adjustment < 0 ){
-					double newPer =existingPerc-Math.abs(adjustment);
-					double averagePerc = (existingPerc+newPer)/2;
-					double cost = (totalValue*averagePerc)/100;
-					double etfTodayPrice = newPricesPerETF.get(ticker);
-					int quantity = new Double(cost/etfTodayPrice).intValue();
-					cost = quantity*etfTodayPrice;
-					newAllocation.setCostPrice(cost);
-					newAllocation.setQuantity(quantity);
-					allocation.setIsActive("N");
-					newInvestment+=newAllocation.getCostPrice();
-					newAllocationList.add(newAllocation);
-				}
-				else if (adjustment > 0 ){
-					double newPer =existingPerc+Math.abs(adjustment);
-					double averagePerc = (existingPerc+newPer)/2;
-					double cost = (totalValue*averagePerc)/100;
-					double etfTodayPrice = newPricesPerETF.get(ticker);
-					int quantity = new Double(cost/etfTodayPrice).intValue();
-					cost = quantity*etfTodayPrice;
-					newAllocation.setCostPrice(cost);
-					newAllocation.setQuantity(quantity);
-					allocation.setIsActive("N");
-					newInvestment+=newAllocation.getCostPrice();
-					newAllocationList.add(newAllocation);
-				}
-				
-			}
-			
-			for(Allocation allocation:newAllocationList){
-				allocation.setInvestment(newInvestment);
-				allocation.setIsActive("Y");
-			}
-			
-			for(Allocation allocation:equityAllocationList)
-				allocation.setIsActive("N");
-			newAllocationList.addAll(equityAllocationList);
-			portfolio.setAllocations(newAllocationList);
-			portfolioRepository.persist(portfolio);			
+	public void rebalanceEquity(Portfolio portfolio, List<Allocation> equityAllocationList,List<Allocation> bondAllocationList){
+		
+		
+		
+		MarketStatus marketStatus = (MarketStatus)portfolioRepository.getEntity(1, MarketStatus.class);
+		InvestorProfile profile = portfolio.getInvestorProfile();
+		RiskTolerance riskTolerance = profile.getRiskTolerance();
+		
+		if(riskTolerance.equals(RiskTolerance.VERY_HIGH) && marketStatus.isGoingUp){
+			System.out.println(" Not rebalancing because RiskToleranc is High and Market is going up.");
+			return;
 		}
+		if(riskTolerance.equals(RiskTolerance.MEDIUM) && marketStatus.isFluctuating){
+			System.out.println(" Tiered Rebalncing because RiskToleranc is Moderate/Mediun and Market is fluctuating.");
+			tieredBasedRebalancing(portfolio, equityAllocationList);
+			return;
+		}
+		if(riskTolerance.equals(RiskTolerance.HIGH) && (marketStatus.isGoingDown || marketStatus.isGoingUp)){
+			System.out.println(" Formula Based Rebalncing because RiskToleranc is High and Market is not fluctuating.");
+			formulaBasedRebalancing(portfolio, equityAllocationList,bondAllocationList);
+		}
+		
 	}
 	
+	private void tieredBasedRebalancing(Portfolio portfolio, List<Allocation> equityAllocationList){
+		HashMap<String,Double> existPercMap = new HashMap<>();
+		HashMap<String, Double> newPercMap = new HashMap<>();
+		HashMap<String, Double> newPricesPerETF = new HashMap<>();
+		double totalValue = 0;
+			
+		for(Allocation existingAllocation:equityAllocationList){
+			int noOfETF = existingAllocation.getQuantity();
+			Map<String,String> paths = PathsAsPerAssetClass.getETFPaths();
+			Calendar cal = Calendar.getInstance();
+			cal.set(Calendar.HOUR, 0);
+			cal.set(Calendar.MINUTE, 0);
+			cal.set(Calendar.SECOND, 0);
+			Date date = cal.getTime();
+	 		GoogleSymbol gs = new GoogleSymbol(existingAllocation.getFund().getTicker());
+	 		List<Data> dataList = gs.getHistoricalPrices();
+	 		Data data = dataList.get(0);
+/*	 			double perIndexCost = data.getPrice();
+ 			ReadFile readFile = new ReadFile();
+*/				double latestPrice = data.getPrice();
+			double cost = latestPrice*existingAllocation.getQuantity();
+			totalValue +=cost;
+			newPercMap.put(existingAllocation.getFund().getTicker(), cost);
+			newPricesPerETF.put(existingAllocation.getFund().getTicker(), latestPrice);
+			existPercMap.put(existingAllocation.getFund().getTicker(), existingAllocation.getPercentage());
+		}
+		newPercMap = updatePercentagesAsPerLatestCost(newPercMap, totalValue);
+		List<Allocation> newAllocationList = new ArrayList<>();
+		
+		Date currentDate = new Date();
+		double newInvestment = 0.0;
+		for(Allocation allocation:equityAllocationList){
+			Allocation newAllocation = copyAllocationInNewObject(allocation, currentDate);
+			String ticker = allocation.getFund().getTicker();
+			double existingPerc = existPercMap.get(ticker);
+			double newPerc = newPercMap.get(ticker);
+			double adjustment = checkEligibilityForAssetClassRebalanncing(existingPerc,newPerc);
+			if(adjustment == 0){
+				newAllocationList.add(newAllocation);
+				allocation.setIsActive("N");
+				newInvestment+=newAllocation.getInvestment();
+			}
+			else if (adjustment < 0 ){
+				double newPer =existingPerc-Math.abs(adjustment);
+				double averagePerc = (existingPerc+newPer)/2;
+				double cost = (totalValue*averagePerc)/100;
+				double etfTodayPrice = newPricesPerETF.get(ticker);
+				int quantity = new Double(cost/etfTodayPrice).intValue();
+				cost = quantity*etfTodayPrice;
+				newAllocation.setCostPrice(cost);
+				newAllocation.setQuantity(quantity);
+				allocation.setIsActive("N");
+				newInvestment+=newAllocation.getCostPrice();
+				newAllocationList.add(newAllocation);
+			}
+			else if (adjustment > 0 ){
+				double newPer =existingPerc+Math.abs(adjustment);
+				double averagePerc = (existingPerc+newPer)/2;
+				double cost = (totalValue*averagePerc)/100;
+				double etfTodayPrice = newPricesPerETF.get(ticker);
+				int quantity = new Double(cost/etfTodayPrice).intValue();
+				cost = quantity*etfTodayPrice;
+				newAllocation.setCostPrice(cost);
+				newAllocation.setQuantity(quantity);
+				allocation.setIsActive("N");
+				newInvestment+=newAllocation.getCostPrice();
+				newAllocationList.add(newAllocation);
+			}
+			
+		}
+		
+		for(Allocation allocation:newAllocationList){
+			allocation.setInvestment(newInvestment);
+			allocation.setIsActive("Y");
+		}
+		
+		for(Allocation allocation:equityAllocationList)
+			allocation.setIsActive("N");
+		newAllocationList.addAll(equityAllocationList);
+		portfolio.setAllocations(newAllocationList);
+		portfolioRepository.persist(portfolio);		
+	}
+	
+	public void formulaBasedRebalancing(Portfolio portfolio, List<Allocation> equityAllocationList,List<Allocation> bondAllocationList){
+		double totalInvestment = 0.0;
+		RiskTolerance riskTolerance = portfolio.getInvestorProfile().getRiskTolerance();
+		if(equityAllocationList != null && equityAllocationList.size()>0)
+			totalInvestment+= equityAllocationList.get(0).getInvestment();
+		
+		if(bondAllocationList != null && bondAllocationList.size()>0)
+			totalInvestment+= bondAllocationList.get(0).getInvestment();
+		
+		
+		final int m = 2;
+		final int floor = getFloorValue(riskTolerance, totalInvestment);
+		
+		double currentValueOfPortfolio = 0;
+		HashMap<String, Double> newPricesPerETF = new HashMap<>();
+		HashMap<String,Double> existPercMap = new HashMap<>();
+
+		for(Allocation existingAllocation:equityAllocationList){
+			int noOfETF = existingAllocation.getQuantity();
+			Map<String,String> paths = PathsAsPerAssetClass.getETFPaths();
+			Calendar cal = Calendar.getInstance();
+			cal.set(Calendar.HOUR, 0);
+			cal.set(Calendar.MINUTE, 0);
+			cal.set(Calendar.SECOND, 0);
+			Date date = cal.getTime();
+	 		GoogleSymbol gs = new GoogleSymbol(existingAllocation.getFund().getTicker());
+	 		List<Data> dataList = gs.getHistoricalPrices();
+	 		Data data = dataList.get(0);
+			double latestPrice = data.getPrice();
+			double cost = latestPrice*existingAllocation.getQuantity();
+			currentValueOfPortfolio +=cost;
+			newPricesPerETF.put(existingAllocation.getFund().getTicker(), latestPrice);
+			existPercMap.put(existingAllocation.getFund().getTicker(), existingAllocation.getPercentage());
+		}
+		
+		double equityPortion = m*(currentValueOfPortfolio-floor);
+		Date currentDate = new Date();
+		List<Allocation> newAllocationList = new ArrayList<>();
+		double investment = 0;
+		for(Allocation allocation : equityAllocationList){
+			String ticker = allocation.getFund().getTicker();
+			Allocation newAllocation = copyAllocationInNewObject(allocation, currentDate);
+			double perc = existPercMap.get(ticker);
+			double etfTodayPrice = newPricesPerETF.get(ticker);
+			double cost = equityPortion*perc;
+			int number = Double.valueOf(cost/etfTodayPrice).intValue();
+			cost = number*etfTodayPrice;
+			investment += cost;
+			newAllocation.setCostPrice(cost);
+			newAllocation.setPercentage(perc);
+			newAllocation.setQuantity(number);
+			newAllocation.setIsActive("Y");
+		}
+		
+		
+		for(Allocation allocation:equityAllocationList)
+			allocation.setIsActive("N");
+		equityAllocationList.addAll(newAllocationList);
+		equityAllocationList.addAll(bondAllocationList);
+		portfolioRepository.persist(equityAllocationList);
+		
+	}
+	private int getFloorValue(RiskTolerance riskTolerance,double totalInvestment){
+		int floorValue = 0;
+		int perc = 0;
+		if(riskTolerance.equals(RiskTolerance.HIGH) || riskTolerance.equals(RiskTolerance.VERY_HIGH)) perc = 25;
+		if(riskTolerance.equals(RiskTolerance.LOW) || riskTolerance.equals(RiskTolerance.VERY_LOW)) perc = 75;
+		if(riskTolerance.equals(RiskTolerance.MEDIUM)) perc = 50;
+		floorValue = Double.valueOf((totalInvestment*perc)/100).intValue();
+		return floorValue;
+	}
 	private Allocation copyAllocationInNewObject(Allocation allocation,Date currentDate){
 		Allocation newAllocation  = new Allocation();
 		newAllocation.setFund(allocation.getFund());
@@ -236,11 +331,7 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 		
 		return newAllocation;
 	}
-	//Here we have to consider all conditions.... still pending for implementation
-	public boolean checkEligibilityForEQRebalancing(Portfolio portfolio,List<Allocation> equityAllocationList){
-		boolean doRebalanceing = true;
-		return doRebalanceing;
-	}
+
 	
 	public HashMap<String,Double> updatePercentagesAsPerLatestCost(HashMap<String,Double> dataMap,double totalCost){
 		HashMap<String,Double> resultMap = new HashMap<>();

@@ -97,7 +97,7 @@ public class PortfolioServiceImpl implements PortfolioService{
 		LinkedHashMap<String,String> assetETFMap = new LinkedHashMap<>();
 		assetETFMap.put("CRSPTM1","VTI");
 		assetETFMap.put("CRSPLC1","VTV");
-		assetETFMap.put("CRSPML1","VOE");
+		assetETFMap.put("CRSPMI1","VOE");
 		assetETFMap.put("CRSPSC1","VBR");
 		return assetETFMap;
 	}
@@ -154,7 +154,7 @@ public class PortfolioServiceImpl implements PortfolioService{
 		ReadFile readFile = new ReadFile();
 		col.add(readFile.getCalendarDataSeries("CRSP_US_Total_Market.txt","CRSPTM1"));
 		col.add(readFile.getCalendarDataSeries("CRSP_US_Large_Cap_Value.txt","CRSPLC1"));
-		col.add(readFile.getCalendarDataSeries("CRSP_US_MID_CAP_VALUE.txt","CRSPML1"));
+		col.add(readFile.getCalendarDataSeries("CRSP_US_MID_CAP_VALUE.txt","CRSPMI1"));
 		col.add(readFile.getCalendarDataSeries("CRSP_US_SMALL_CAP_VALUE.txt","CRSPSC1"));
 		BasicMatrix covarianceMatrix = FinanceUtils.makeCovarianceMatrix(col);
 		return covarianceMatrix;
