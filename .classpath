@@ -1,13 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
-	<classpathentry excluding="java/|resources/|org/|java/com/|java/org/" kind="src" path="src/main"/>
+	<classpathentry excluding="java/|resources/|org/|java/com/|java/org/|js/" kind="src" path="src/main"/>
+	<classpathentry kind="src" path="src/main/js"/>
 	<classpathentry kind="src" output="target/classes" path="src/main/java">
 		<attributes>
 			<attribute name="optional" value="true"/>
 			<attribute name="maven.pomderived" value="true"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry excluding="main/java/|main/resources/|test/java/|org/ojalgo/|main/|org/|main/org/|main/java/com/|main/java/org/" kind="src" path="src"/>
+	<classpathentry excluding="main/java/|main/resources/|test/java/|org/ojalgo/|main/|org/|main/org/|main/java/com/|main/java/org/|main/js/" kind="src" path="src"/>
 	<classpathentry excluding="**" kind="src" output="target/classes" path="src/main/resources">
 		<attributes>
 			<attribute name="maven.pomderived" value="true"/>
@@ -24,5 +25,6 @@
 		</attributes>
 	</classpathentry>
 	<classpathentry combineaccessrules="false" kind="src" path="/hybodb"/>
+	<classpathentry kind="lib" path="D:/sts-bundle/sts-3.8.3.RELEASE/lombok.jar"/>
 	<classpathentry kind="output" path="target/classes"/>
 </classpath>

@@ -3,6 +3,7 @@ package com.hackovation.hybo.Controllers;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
+import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Map;
@@ -22,9 +23,10 @@ import com.hack17.hybo.repository.PortfolioRepository;
 
 @RestController
 @RequestMapping(value="/process")
+@Transactional
 public class PutDataController {
 
-//	@Autowired
+	@Autowired
 	PortfolioRepository portfolioRepository;
 	
 	@RequestMapping(method=RequestMethod.GET,value="/index")
@@ -32,30 +34,30 @@ public class PutDataController {
 		processFiles();
 	}
 	
-	@Transactional
 	public void processFiles(){
-		processFileAndPushInDatabase("CRSP US Large Cap Historical Rates - Investing.com India.csv","CRSPTM1");
-		processFileAndPushInDatabase("CRSP US Mid Cap Historical Rates - Investing.com India.csv","CRSPLC1");
-		processFileAndPushInDatabase("CRSP US Small Cap Historical Rates - Investing.com India.csv","CRSPMI1");
-		processFileAndPushInDatabase("CRSP US Total Market Historical Rates - Investing.com India.csv","CRSPSC1");
+		processFileAndPushInDatabase("CRSP_US_Large_Cap_Historical_Rates.csv","CRSPTM1");
+		processFileAndPushInDatabase("CRSP_US_Mid_Cap_Historical_Rates.csv","CRSPLC1");
+		processFileAndPushInDatabase("CRSP_US_Small_Cap_Historical_Rates.csv","CRSPMI1");
+		processFileAndPushInDatabase("CRSP_US_Total_Market_Historical_Rates.csv","CRSPSC1");
 	}
 	public void processFileAndPushInDatabase(String fileName,String index){
 		try{
 			SimpleDateFormat sdf = new SimpleDateFormat("MMM dd, yyyy");
+			DecimalFormat df = new DecimalFormat("##########,###################.#############");
 			ClassLoader cl = getClass().getClassLoader();
-			File file = new File(cl.getResource("fileName").getFile());
+			File file = new File(cl.getResource(fileName).getFile());
 			BufferedReader f = new BufferedReader(new FileReader(file));
 			String ln=null;
 			f.readLine();
 			while((ln=f.readLine())!=null){
 				String[] data = ln.split("\",\"");
 				Date date = sdf.parse(removeQuote(data[0]));
-				double price = Double.valueOf(removeQuote(data[1]));
-				double open = Double.valueOf(removeQuote(data[2]));
-				double high = Double.valueOf(removeQuote(data[3]));
-				double low = Double.valueOf(removeQuote(data[4]));
+				double price = df.parse(removeQuote(data[1])).doubleValue();
+				double open = df.parse(removeQuote(data[2])).doubleValue();
+				double high = df.parse(removeQuote(data[3])).doubleValue();
+				double low = df.parse(removeQuote(data[4])).doubleValue();
 				int volumn = Integer.valueOf(removeQuote(data[5]));
-				double change = Double.valueOf(removeQuote(data[6]));
+				double change = df.parse(removeQuote(data[6])).doubleValue();
 				IndexPrice indexPrice = new IndexPrice();
 				indexPrice.setDate(date);
 				indexPrice.setChange(change);
