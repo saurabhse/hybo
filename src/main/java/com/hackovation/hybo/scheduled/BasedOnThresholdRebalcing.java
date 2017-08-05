@@ -1,6 +1,5 @@
 package com.hackovation.hybo.scheduled;
 
-import static org.mockito.Matchers.doubleThat;
 
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -12,12 +11,9 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
 import java.util.Set;
-import org.algo.finance.FinanceUtils;
 import org.algo.finance.data.GoogleSymbol;
 import org.algo.finance.data.GoogleSymbol.Data;
-import org.algo.matrix.BasicMatrix;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,8 +23,8 @@ import com.hack17.hybo.domain.MarketStatus;
 import com.hack17.hybo.domain.Portfolio;
 import com.hack17.hybo.domain.RiskTolerance;
 import com.hack17.hybo.repository.PortfolioRepository;
+import com.hack17.hybo.service.DBLoggerService;
 import com.hackovation.hybo.AllocationType;
-import com.hackovation.hybo.ReadFile;
 import com.hackovation.hybo.Util.EtfIndexMap;
 import com.hackovation.hybo.Util.PathsAsPerAssetClass;
 import com.hackovation.hybo.rebalance.Rebalance;
@@ -38,6 +34,8 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 
 	@Autowired
 	PortfolioRepository portfolioRepository;
+	@Autowired
+	DBLoggerService dbLoggerService;
 	final int threshold = 15;
 	Map<String,String> indexToEtfMap;
 	Map<String,String> EtfToIndexMap;
@@ -218,6 +216,7 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 				allocation.setIsActive("N");
 				newInvestment+=newAllocation.getCostPrice();
 				newAllocationList.add(newAllocation);
+				log(allocation, newAllocation, currentDate);
 			}
 			else if (adjustment > 0 ){
 				double newPer =existingPerc+Math.abs(adjustment);
@@ -231,6 +230,7 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 				allocation.setIsActive("N");
 				newInvestment+=newAllocation.getCostPrice();
 				newAllocationList.add(newAllocation);
+				log(allocation, newAllocation, currentDate);
 			}
 			
 		}
@@ -299,9 +299,8 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 			newAllocation.setPercentage(perc);
 			newAllocation.setQuantity(number);
 			newAllocation.setIsActive("Y");
+			log(allocation, newAllocation, currentDate);
 		}
-		
-		
 		for(Allocation allocation:equityAllocationList)
 			allocation.setIsActive("N");
 		equityAllocationList.addAll(newAllocationList);
@@ -356,6 +355,16 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 		else rebalanceAssetClass = false;
 		if(!rebalanceAssetClass)diff = 0;
 		return diff;
+	}
+	
+	public void log(Allocation existingAllocation,Allocation newAllocation,Date sellDate){
+		int oldQuantity = existingAllocation.getQuantity();
+		int newQuantity = newAllocation.getQuantity();
+		if(oldQuantity>newQuantity){//SELL
+			dbLoggerService.logTransaction(existingAllocation, newAllocation.getCostPrice(), sellDate, oldQuantity-newQuantity);
+		}else if(newQuantity>oldQuantity){//BUY
+			dbLoggerService.logTransaction(existingAllocation, newAllocation.getCostPrice(), sellDate, newQuantity-oldQuantity);
+		}
 	}
 /*	
  	public void rebalancePortfolio(Portfolio portfolio,List<Allocation> actualAllocationList){

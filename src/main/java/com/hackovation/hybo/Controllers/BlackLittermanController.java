@@ -4,6 +4,8 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -27,7 +29,7 @@ public class BlackLittermanController {
 	Rebalance rebalance;
 	
 	@RequestMapping(method=RequestMethod.GET,value="/getPortfolio")
-	public @ResponseBody Map<String,Portfolio> getPortfolio(@RequestParam(name="clientId") String clientId) throws Exception{
+	public @ResponseBody Map<String,Portfolio> getPortfolio(@RequestParam(name="clientId") String clientId,@RequestParam(name="date") String dateString) throws Exception{
 		ClassLoader cl = getClass().getClassLoader();
 		File file = new File(cl.getResource("CRSP_US_Total_Market_IndividualMarketValue.txt").getFile());
 		BufferedReader f = new BufferedReader(new FileReader(file));
@@ -35,7 +37,8 @@ public class BlackLittermanController {
 		while((ln=f.readLine())!=null){
 			//System.out.println(ln);;
 		}
-		return portfolioService.buildPortfolio(clientId,false);
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd");
+		return portfolioService.buildPortfolio(clientId,false,sdf.parse(dateString));
 	}
 
 	@RequestMapping(method=RequestMethod.GET,value="/rebalance")

@@ -23,12 +23,15 @@ import org.algo.finance.portfolio.MarketEquilibrium;
 import org.algo.matrix.BasicMatrix;
 import org.algo.matrix.BigMatrix;
 import org.algo.series.CalendarDateSeries;
+import org.algo.type.CalendarDate;
+import org.algo.type.CalendarDateUnit;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.hack17.hybo.domain.Allocation;
 import com.hack17.hybo.domain.Fund;
+import com.hack17.hybo.domain.IndexPrice;
 import com.hack17.hybo.domain.InvestorProfile;
 import com.hack17.hybo.domain.Portfolio;
 import com.hack17.hybo.domain.RiskTolerance;
@@ -50,12 +53,12 @@ public class PortfolioServiceImpl implements PortfolioService{
 
 	
 	@Override
-	public Map<String,Portfolio> buildPortfolio(String clientId,boolean dummy) {
+	public Map<String,Portfolio> buildPortfolio(String clientId,boolean dummy,Date date) {
 		System.out.println("Building Portfolio Started "+clientId);
 		EtfToIndexMap = EtfIndexMap.getEtfToIndexMapping();
 		indexToEtfMap = EtfIndexMap.getIndexToEtfMapping();
 		// Step 1. Calculate Covariance Matrix
-		BasicMatrix covarianceMatrix = getCovarianceMatrix();
+		BasicMatrix covarianceMatrix = getCovarianceMatrix(date);
 		System.out.println("--------------Covariance Matrix Calculation "+clientId);
 //		System.out.println(covarianceMatrix);
 
@@ -149,16 +152,32 @@ public class PortfolioServiceImpl implements PortfolioService{
 		marketWeight[3][0]=totalValue[3]/total;
 		return marketWeight;
 	}
-	BasicMatrix getCovarianceMatrix(){
+	BasicMatrix getCovarianceMatrix(Date date){
 		Collection<CalendarDateSeries<Double>> col = new ArrayList<>();
-		ReadFile readFile = new ReadFile();
-		col.add(readFile.getCalendarDataSeries("CRSP_US_Total_Market.txt","CRSPTM1"));
-		col.add(readFile.getCalendarDataSeries("CRSP_US_Large_Cap_Value.txt","CRSPLC1"));
-		col.add(readFile.getCalendarDataSeries("CRSP_US_MID_CAP_VALUE.txt","CRSPMI1"));
-		col.add(readFile.getCalendarDataSeries("CRSP_US_SMALL_CAP_VALUE.txt","CRSPSC1"));
+		col.add(getCalendarDataSeriesFromDatabase("CRSPTM1",date));
+		col.add(getCalendarDataSeriesFromDatabase("CRSPLC1",date));
+		col.add(getCalendarDataSeriesFromDatabase("CRSPMI1",date));
+		col.add(getCalendarDataSeriesFromDatabase("CRSPSC1",date));
 		BasicMatrix covarianceMatrix = FinanceUtils.makeCovarianceMatrix(col);
 		return covarianceMatrix;
 	}
+	public CalendarDateSeries<Double> getCalendarDataSeriesFromDatabase(String symbol,Date portfolioDate){
+		CalendarDateSeries<Double> series = new CalendarDateSeries<Double>(CalendarDateUnit.DAY).name(symbol);
+		try{
+			List<IndexPrice> indexPriceList = portfolioRepository.getIndexPrice(symbol,portfolioDate);
+			for(IndexPrice indexPrice:indexPriceList){
+				CalendarDate key = new CalendarDate(indexPrice.getDate());
+				
+				NumberFormat numberFormat = NumberFormat.getInstance(java.util.Locale.US);
+				series.put(key, indexPrice.getPrice());
+				
+			}
+		}catch(Exception e){
+			e.printStackTrace();
+		}
+		return series;
+	}
+
 	public Map<String,Portfolio> buildPortfolio(double investment,LinkedHashMap<String, Double> assetClassWiseWeight,String clientId,boolean dummy){
 		Portfolio portfolio = new Portfolio();
 		List<Allocation> allocationList = new ArrayList<>();
@@ -186,8 +205,8 @@ public class PortfolioServiceImpl implements PortfolioService{
 	 			allocation.setFund(fund);
 	 			allocationList.add(allocation);
 	 		}
- 			portfolio.setAllocations(allocationList);
 		}
+		portfolio.setAllocations(allocationList);
 		//System.out.println(portfolioRepository.getPortfolio(1));
 		
 		InvestorProfile profile = new InvestorProfile();
