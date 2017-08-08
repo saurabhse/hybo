@@ -10,6 +10,8 @@ public class EtfIndexMap {
 		map.put("CRSPLC1", "VTV");
 		map.put("CRSPML1", "VOE");
 		map.put("CRSPSC1", "VBR");
+		map.put("SHV", "SHV");
+		map.put("LQD", "LQD");
 		return map;
 	}
 
@@ -19,6 +21,8 @@ public class EtfIndexMap {
 		map.put("VTV","CRSPLC1");
 		map.put("VOE","CRSPML1");
 		map.put("VBR","CRSPSC1");
+		map.put("SHV","SHV");
+		map.put("LQD","LQD");
 		return map;
 	}
 }

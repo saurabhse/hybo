@@ -78,6 +78,8 @@ public class PortfolioServiceImpl implements PortfolioService{
 		weights.add(new BigDecimal(0));
 		weights.add(new BigDecimal(0));
 		weights.add(new BigDecimal(0));
+		weights.add(new BigDecimal(0));
+		weights.add(new BigDecimal(0));
 		bl.addViewWithBalancedConfidence(weights, 0.26);
 		
 /*		System.out.println("--------------Asset Return Matrix---------------------");
@@ -102,6 +104,8 @@ public class PortfolioServiceImpl implements PortfolioService{
 		assetETFMap.put("CRSPLC1","VTV");
 		assetETFMap.put("CRSPMI1","VOE");
 		assetETFMap.put("CRSPSC1","VBR");
+		assetETFMap.put("SHV","SHV");
+		assetETFMap.put("LQD","LQD");
 		return assetETFMap;
 	}
 	private String[] getAssetsTickers(){
@@ -117,17 +121,21 @@ public class PortfolioServiceImpl implements PortfolioService{
 		tickers[2] = "AOM";
 		tickers[3] = "PCEF";
 		tickers[4] = "AOA";
+		tickers[5] = "SHV";
+		tickers[4] = "LQD";
 		return tickers;
 	}
 	double[][] getMarketWeight(){
-		double[][] marketWeight = new double[4][1];
-		double[] totalValue = new double[4]; 
+		double[][] marketWeight = new double[6][1];
+		double[] totalValue = new double[6]; 
 		try{
-			ArrayList<String> files = new ArrayList<>(4);
+			ArrayList<String> files = new ArrayList<>(6);
 			files.add("CRSP_US_Total_Market_IndividualMarketValue.txt");
 			files.add("CRSP_US_Large_Cap_Value_IndividualMarketValue.txt");
 			files.add("CRSP_US_MID_CAP_VALUE_IndividualMarketValue.txt");
 			files.add("CRSP_US_SMALL_CAP_VALUE_IndividualMarketValue.txt");
+			files.add("SHV_IndividualMarketValue.txt");
+			files.add("LQD_IndividualMarketValue.txt");
 			int i = 0;
 			ClassLoader cl = getClass().getClassLoader();
 			for(String fileName:files){
@@ -150,6 +158,8 @@ public class PortfolioServiceImpl implements PortfolioService{
 		marketWeight[1][0]=totalValue[1]/total;
 		marketWeight[2][0]=totalValue[2]/total;
 		marketWeight[3][0]=totalValue[3]/total;
+		marketWeight[4][0]=totalValue[4]/total;
+		marketWeight[5][0]=totalValue[5]/total;
 		return marketWeight;
 	}
 	BasicMatrix getCovarianceMatrix(Date date){
@@ -158,6 +168,8 @@ public class PortfolioServiceImpl implements PortfolioService{
 		col.add(getCalendarDataSeriesFromDatabase("CRSPLC1",date));
 		col.add(getCalendarDataSeriesFromDatabase("CRSPMI1",date));
 		col.add(getCalendarDataSeriesFromDatabase("CRSPSC1",date));
+		col.add(getCalendarDataSeriesFromDatabase("SHV",date));
+		col.add(getCalendarDataSeriesFromDatabase("LQD",date));
 		BasicMatrix covarianceMatrix = FinanceUtils.makeCovarianceMatrix(col);
 		return covarianceMatrix;
 	}

@@ -11,6 +11,8 @@ public class PathsAsPerAssetClass {
 		map.put("CRSPLC1","D:\\Wkspace\\Hacovation\\CRSP US Large Cap Value.txt");
 		map.put("CRSPML1","D:\\Wkspace\\Hacovation\\CRSP US MID CAP VALUE.txt");
 		map.put("CRSPSC1","D:\\Wkspace\\Hacovation\\CRSP US SMALL CAP VALUE.txt");
+		map.put("SHV","D:\\Wkspace\\Hacovation\\SHV_CAP_VALUE.txt");
+		map.put("LQD","D:\\Wkspace\\Hacovation\\LQD_CAP_VALUE.txt");
 		return map;
 	}
 }

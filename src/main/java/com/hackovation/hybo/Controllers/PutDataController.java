@@ -39,6 +39,8 @@ public class PutDataController {
 		processFileAndPushInDatabase("CRSP_US_Mid_Cap_Historical_Rates.csv","CRSPLC1");
 		processFileAndPushInDatabase("CRSP_US_Small_Cap_Historical_Rates.csv","CRSPMI1");
 		processFileAndPushInDatabase("CRSP_US_Total_Market_Historical_Rates.csv","CRSPSC1");
+		processFileAndPushInDatabaseOverloaded("shv_Historical_Rates.csv","SHV");
+		processFileAndPushInDatabaseOverloaded("lqd_Historical_Rates.csv","LQD");
 	}
 	public void processFileAndPushInDatabase(String fileName,String index){
 		try{
@@ -73,7 +75,39 @@ public class PutDataController {
 			e.printStackTrace();
 		}
 	}
-	
+	public void processFileAndPushInDatabaseOverloaded(String fileName,String index){
+		try{
+			SimpleDateFormat sdf = new SimpleDateFormat("dd-MMM-yy");
+			DecimalFormat df = new DecimalFormat("##########,###################.#############");
+			ClassLoader cl = getClass().getClassLoader();
+			File file = new File(cl.getResource(fileName).getFile());
+			BufferedReader f = new BufferedReader(new FileReader(file));
+			String ln=null;
+			f.readLine();
+			while((ln=f.readLine())!=null){
+				String[] data = ln.split(",");
+				Date date = sdf.parse(removeQuote(data[0]));
+				double price = df.parse(removeQuote(data[4])).doubleValue();
+				double open = df.parse(removeQuote(data[1])).doubleValue();
+				double high = df.parse(removeQuote(data[2])).doubleValue();
+				double low = df.parse(removeQuote(data[3])).doubleValue();
+				int volumn = Integer.valueOf(removeQuote(data[5]));
+			//	double change = df.parse(removeQuote(data[6])).doubleValue();
+				IndexPrice indexPrice = new IndexPrice();
+				indexPrice.setDate(date);
+				indexPrice.setChange(0);
+				indexPrice.setHigh(high);
+				indexPrice.setLow(low);
+				indexPrice.setOpen(open);
+				indexPrice.setPrice(price);
+				indexPrice.setVolumn(volumn);
+				indexPrice.setIndex(index);
+				portfolioRepository.persist(indexPrice);
+			}
+		}catch(Exception e){
+			e.printStackTrace();
+		}
+	}
 	
 	private String removeQuote(String s){
 		return s.replaceAll("\"","");
