@@ -1,25 +1,35 @@
 package com.hackovation.hybo.Controllers;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.text.SimpleDateFormat;
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Random;
+import java.util.Set;
+
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.hack17.hybo.domain.Allocation;
+import com.hack17.hybo.domain.InvestorProfile;
 import com.hack17.hybo.domain.Portfolio;
+import com.hackovation.hybo.Util.EtfIndexMap;
+import com.hackovation.hybo.bean.ProfileRequest;
+import com.hackovation.hybo.bean.ProfileResponse;
 import com.hackovation.hybo.rebalance.Rebalance;
 import com.hackovation.hybo.services.PortfolioService;
 
 @RestController
-@RequestMapping(value="/rest/bl")
+@RequestMapping(value="/black")
 public class BlackLittermanController {
 	
 	@Autowired
@@ -28,7 +38,46 @@ public class BlackLittermanController {
 	@Autowired
 	Rebalance rebalance;
 	
-	@RequestMapping(method=RequestMethod.GET,value="/getPortfolio")
+	@RequestMapping(value="/createProfile", method=RequestMethod.POST,produces = "application/json",consumes =  MediaType.APPLICATION_JSON_VALUE)
+	public @ResponseBody String createProfileAndCreatePortfolio(HttpEntity<String> entity){
+		String str = "";
+		try {
+			String json = entity.getBody();
+			ObjectMapper mapper = new ObjectMapper();
+			ProfileRequest profileRequest;
+			profileRequest = mapper.readValue(json, ProfileRequest.class);
+			InvestorProfile investorProfile = portfolioService.createProfile(profileRequest);
+			Map<String,Portfolio> dataMap = createPortfolio(investorProfile, profileRequest.getAmount());
+			List<ProfileResponse> responseList = new ArrayList<>();
+			Set<Entry<String,Portfolio>> entrySet = dataMap.entrySet();
+			Map<String,String> etfAssetClassMap = EtfIndexMap.ETFToAssetClassMap();
+			for(Entry<String,Portfolio> entry:entrySet){
+				Portfolio portfolio= entry.getValue();
+				List<Allocation> allocationList = portfolio.getAllocations();
+				for(Allocation allocation:allocationList){
+					ProfileResponse response = new ProfileResponse();
+					response.setClientId(Integer.valueOf(entry.getKey()));
+					response.setLabel(etfAssetClassMap.get(allocation.getFund().getTicker()));
+					response.setValue(String.valueOf(allocation.getPercentage()));
+					responseList.add(response);
+				}
+			}
+			ObjectMapper responseMapper = new ObjectMapper();
+			str = responseMapper.writeValueAsString(responseList);
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return str;
+	}
+	
+	public Map<String,Portfolio> createPortfolio(InvestorProfile profile,int investment) throws Exception{
+		Random random  = new Random();
+		int clientId = random.nextInt(10000000);
+		return portfolioService.buildPortfolio(profile,clientId,false,new Date(),investment);
+	}
+
+/*	@RequestMapping(method=RequestMethod.GET,value="/getPortfolio")
 	public @ResponseBody Map<String,Portfolio> getPortfolio(@RequestParam(name="clientId") String clientId,@RequestParam(name="date") String dateString) throws Exception{
 		ClassLoader cl = getClass().getClassLoader();
 		File file = new File(cl.getResource("CRSP_US_Total_Market_IndividualMarketValue.txt").getFile());
@@ -40,7 +89,7 @@ public class BlackLittermanController {
 		SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd");
 		return portfolioService.buildPortfolio(clientId,false,sdf.parse(dateString));
 	}
-
+*/
 	@RequestMapping(method=RequestMethod.GET,value="/rebalance")
 	public void rebalancePortfolio(){
 		 rebalance.rebalance();

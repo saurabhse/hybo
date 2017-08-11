@@ -25,4 +25,15 @@ public class EtfIndexMap {
 		map.put("LQD","LQD");
 		return map;
 	}
+	
+	public static Map<String,String> ETFToAssetClassMap(){
+		Map<String,String> map = new HashMap<>();
+		map.put("VTI","US Total Stock Market");
+		map.put("VTV","US Large Cap");
+		map.put("VOE","US Mid Cap");
+		map.put("VBR","US Small Cap");
+		map.put("SHV","Short Term Treasuries");
+		map.put("LQD","US Investment Grade Bonds");
+		return map;
+	}
 }

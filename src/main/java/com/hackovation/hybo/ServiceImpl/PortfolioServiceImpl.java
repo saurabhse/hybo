@@ -6,6 +6,7 @@ import java.io.FileReader;
 import java.math.BigDecimal;
 import java.text.NumberFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
@@ -39,6 +40,7 @@ import com.hack17.hybo.repository.PortfolioRepository;
 import com.hackovation.hybo.AllocationType;
 import com.hackovation.hybo.ReadFile;
 import com.hackovation.hybo.Util.EtfIndexMap;
+import com.hackovation.hybo.bean.ProfileRequest;
 import com.hackovation.hybo.services.PortfolioService;
 
 @Service
@@ -53,7 +55,7 @@ public class PortfolioServiceImpl implements PortfolioService{
 
 	
 	@Override
-	public Map<String,Portfolio> buildPortfolio(String clientId,boolean dummy,Date date) {
+	public Map<String,Portfolio> buildPortfolio(InvestorProfile profile,int clientId,boolean dummy,Date date,int investment) {
 		System.out.println("Building Portfolio Started "+clientId);
 		EtfToIndexMap = EtfIndexMap.getEtfToIndexMapping();
 		indexToEtfMap = EtfIndexMap.getIndexToEtfMapping();
@@ -93,7 +95,7 @@ public class PortfolioServiceImpl implements PortfolioService{
 		for(String assetClass:indexToEtfMap.keySet()){
 			assetClassWiseWeight.put(assetClass, finalAssetWeights.doubleValue(i++));
 		}
-		Map<String,Portfolio> map = buildPortfolio(30000,assetClassWiseWeight,clientId,dummy);
+		Map<String,Portfolio> map = buildPortfolio(profile,investment,assetClassWiseWeight,clientId,dummy);
 		System.out.println("Building Portfolio Done "+clientId);
 		return map;		
 	}
@@ -190,8 +192,9 @@ public class PortfolioServiceImpl implements PortfolioService{
 		return series;
 	}
 
-	public Map<String,Portfolio> buildPortfolio(double investment,LinkedHashMap<String, Double> assetClassWiseWeight,String clientId,boolean dummy){
+	public Map<String,Portfolio> buildPortfolio(InvestorProfile profile,int investment,LinkedHashMap<String, Double> assetClassWiseWeight,int clientId,boolean dummy){
 		Portfolio portfolio = new Portfolio();
+		portfolio.setClientId(clientId);
 		List<Allocation> allocationList = new ArrayList<>();
 		Map<String, Portfolio> portfolioMap = new HashMap<>();
 		Date date = new Date();
@@ -221,12 +224,10 @@ public class PortfolioServiceImpl implements PortfolioService{
 		portfolio.setAllocations(allocationList);
 		//System.out.println(portfolioRepository.getPortfolio(1));
 		
-		InvestorProfile profile = new InvestorProfile();
-		profile.setRiskTolerance(RiskTolerance.MEDIUM);
 		portfolio.setInvestorProfile(profile);
 		portfolioRepository.persist(portfolio);
 		
-		
+		portfolioMap.put(clientId+"", portfolio);
 		return portfolioMap;
 	}
 
@@ -235,5 +236,18 @@ public class PortfolioServiceImpl implements PortfolioService{
 		List<Portfolio> listOfPortfolios =  portfolioRepository.getAllPortfolios();
 		
 		for(Portfolio port:listOfPortfolios)portfolioRepository.delete(port);
+	}
+
+	@Override
+	public InvestorProfile createProfile(ProfileRequest profileRequest) {
+		InvestorProfile profile = new InvestorProfile();
+		profile.setAnnualIncome(profileRequest.getIncome());
+		profile.setRiskTolerance(RiskTolerance.valueOf(profileRequest.getRisk().toUpperCase()));
+		int horizonOffsetYear = profileRequest.getTime();
+		Calendar cal = Calendar.getInstance();
+		cal.add(Calendar.YEAR, horizonOffsetYear);
+		profile.setHorizonAsOfDate(cal.getTime());
+		portfolioRepository.persist(profile);
+		return profile;
 	}
 }
