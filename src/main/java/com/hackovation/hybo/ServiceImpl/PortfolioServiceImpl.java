@@ -52,7 +52,7 @@ public class PortfolioServiceImpl implements PortfolioService{
 
 	Map<String,String> indexToEtfMap;
 	Map<String,String> EtfToIndexMap;
-
+	String l = "D:\\MATERIAL\\Hackathon\\Hackovation 2.0\\selected\\hybo\\Workspace\\hybo\\target\\classes\\";
 	
 	@Override
 	public Map<String,Portfolio> buildPortfolio(InvestorProfile profile,int clientId,boolean dummy,Date date,int investment) {
@@ -142,7 +142,8 @@ public class PortfolioServiceImpl implements PortfolioService{
 			ClassLoader cl = getClass().getClassLoader();
 			for(String fileName:files){
 				File file = new File(cl.getResource(fileName).getFile());
-				BufferedReader f = new BufferedReader(new FileReader(file));
+				//BufferedReader f = new BufferedReader(new FileReader(file));
+				BufferedReader f = new BufferedReader(new FileReader(l+fileName));
 				String ln=null;
 				while((ln=f.readLine())!=null){
 					totalValue[i] +=Double.valueOf(ln.substring(ln.lastIndexOf("#")+1));

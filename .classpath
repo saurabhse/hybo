@@ -25,6 +25,6 @@
 		</attributes>
 	</classpathentry>
 	<classpathentry combineaccessrules="false" kind="src" path="/hybodb"/>
-	<classpathentry kind="lib" path="D:/sts-bundle/sts-3.8.3.RELEASE/lombok.jar"/>
+	<classpathentry kind="lib" path="D:/Softwares/spring-tool-suite-3.8.3.RELEASE-e4.6.2-win32-x86_64/sts-bundle/sts-3.8.3.RELEASE/lombok.jar"/>
 	<classpathentry kind="output" path="target/classes"/>
 </classpath>

@@ -48,7 +48,8 @@ public class PutDataController {
 			DecimalFormat df = new DecimalFormat("##########,###################.#############");
 			ClassLoader cl = getClass().getClassLoader();
 			File file = new File(cl.getResource(fileName).getFile());
-			BufferedReader f = new BufferedReader(new FileReader(file));
+			String l = "D:\\MATERIAL\\Hackathon\\Hackovation 2.0\\selected\\hybo\\Workspace\\hybo\\target\\classes\\";
+			BufferedReader f = new BufferedReader(new FileReader(l+fileName));
 			String ln=null;
 			f.readLine();
 			while((ln=f.readLine())!=null){
@@ -81,7 +82,8 @@ public class PutDataController {
 			DecimalFormat df = new DecimalFormat("##########,###################.#############");
 			ClassLoader cl = getClass().getClassLoader();
 			File file = new File(cl.getResource(fileName).getFile());
-			BufferedReader f = new BufferedReader(new FileReader(file));
+			String l = "D:\\MATERIAL\\Hackathon\\Hackovation 2.0\\selected\\hybo\\Workspace\\hybo\\target\\classes\\";
+			BufferedReader f = new BufferedReader(new FileReader(l+fileName));
 			String ln=null;
 			f.readLine();
 			while((ln=f.readLine())!=null){
