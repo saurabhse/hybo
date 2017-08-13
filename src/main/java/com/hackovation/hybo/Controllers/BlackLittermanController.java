@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hack17.hybo.domain.Allocation;
 import com.hack17.hybo.domain.InvestorProfile;
 import com.hack17.hybo.domain.Portfolio;
+import com.hack17.hybo.repository.PortfolioRepository;
 import com.hackovation.hybo.Util.EtfIndexMap;
 import com.hackovation.hybo.bean.ProfileRequest;
 import com.hackovation.hybo.bean.ProfileResponse;
@@ -34,6 +35,8 @@ import com.hackovation.hybo.services.PortfolioService;
 @CrossOrigin
 public class BlackLittermanController {
 	
+	@Autowired
+	PortfolioRepository portfolioRepository;
 	@Autowired
 	PortfolioService portfolioService;
 	
@@ -78,7 +81,35 @@ public class BlackLittermanController {
 		int clientId = random.nextInt(10000000);
 		return portfolioService.buildPortfolio(profile,clientId,false,new Date(),investment);
 	}
+	
+	@RequestMapping(value="/getPortfolioCid", method=RequestMethod.GET,produces = "application/json")
+	public @ResponseBody String getPortfolioForClientIdAsPerAmount(@RequestParam(name="clientId") String clientId){
+		String str = "No Data To Display";
+		try{
+			List<Portfolio>	portfolioList = portfolioRepository.getPortfolio(Integer.valueOf(clientId));
+			Portfolio portfolio = portfolioList.get(0);
+			
+			List<ProfileResponse> responseList = new ArrayList<>();
+			Map<String,String> etfAssetClassMap = EtfIndexMap.ETFToAssetClassMap();
+			List<Allocation> allocationList = portfolio.getAllocations();
+			for(Allocation allocation:allocationList){
+				if(allocation.getCostPrice()==0d)continue;
+				ProfileResponse response = new ProfileResponse();
+				response.setClientId(Integer.valueOf(clientId));
+				response.setLabel(etfAssetClassMap.get(allocation.getFund().getTicker()));
+				response.setValue(String.valueOf(allocation.getCostPrice()));
+				responseList.add(response);
+			}
+			ObjectMapper responseMapper = new ObjectMapper();
+			str = responseMapper.writeValueAsString(responseList);
 
+			
+			
+		}catch(Exception e){
+			e.printStackTrace();
+		}
+		return str;
+	}
 /*	@RequestMapping(method=RequestMethod.GET,value="/getPortfolio")
 	public @ResponseBody Map<String,Portfolio> getPortfolio(@RequestParam(name="clientId") String clientId,@RequestParam(name="date") String dateString) throws Exception{
 		ClassLoader cl = getClass().getClassLoader();
