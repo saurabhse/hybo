@@ -90,13 +90,12 @@ public class BlackLittermanController {
 			Portfolio portfolio = portfolioList.get(0);
 			
 			List<ProfileResponse> responseList = new ArrayList<>();
-			Map<String,String> etfAssetClassMap = EtfIndexMap.ETFToAssetClassMap();
 			List<Allocation> allocationList = portfolio.getAllocations();
 			for(Allocation allocation:allocationList){
 				if(allocation.getCostPrice()==0d)continue;
 				ProfileResponse response = new ProfileResponse();
 				response.setClientId(Integer.valueOf(clientId));
-				response.setLabel(etfAssetClassMap.get(allocation.getFund().getTicker()));
+				response.setLabel(allocation.getFund().getTicker());
 				response.setValue(String.valueOf(allocation.getCostPrice()));
 				responseList.add(response);
 			}
