@@ -35,6 +35,7 @@ import com.hack17.hybo.domain.Allocation;
 import com.hack17.hybo.domain.Fund;
 import com.hack17.hybo.domain.IndexPrice;
 import com.hack17.hybo.domain.InvestorProfile;
+import com.hack17.hybo.domain.MarketWeight;
 import com.hack17.hybo.domain.Portfolio;
 import com.hack17.hybo.domain.RiskTolerance;
 import com.hack17.hybo.repository.PortfolioRepository;
@@ -75,7 +76,7 @@ public class PortfolioServiceImpl implements PortfolioService{
 		
 		String[] tickers = getAssetsTickers();
 //		double[][] marketWeight = {{0.25},{3},{0.25},{0.25}};
-		double[][] marketWeight = getMarketWeight();
+		double[][] marketWeight = getMarketWeight(date);
 		BasicMatrix marketWeightMatrix =  BigMatrix.FACTORY.rows(marketWeight);
 		System.out.println("###### Creating BlackLittermanObject ( -- Market Equilibrium");
 		MarketEquilibrium marketEquilibrium = new MarketEquilibrium(tickers, covarianceMatrix, lambda);
@@ -137,32 +138,26 @@ public class PortfolioServiceImpl implements PortfolioService{
 		tickers[4] = "LQD";
 		return tickers;
 	}
-	double[][] getMarketWeight(){
+	double[][] getMarketWeight(Date date){
 		double[][] marketWeight = new double[6][1];
 		double[] totalValue = new double[6]; 
-		try{
-			ArrayList<String> files = new ArrayList<>(6);
-			files.add("CRSP_US_Total_Market_IndividualMarketValue.txt");
-			files.add("CRSP_US_Large_Cap_Value_IndividualMarketValue.txt");
-			files.add("CRSP_US_MID_CAP_VALUE_IndividualMarketValue.txt");
-			files.add("CRSP_US_SMALL_CAP_VALUE_IndividualMarketValue.txt");
-			files.add("SHV_IndividualMarketValue.txt");
-			files.add("LQD_IndividualMarketValue.txt");
-			int i = 0;
-			ClassLoader cl = getClass().getClassLoader();
-			for(String fileName:files){
-				File file = new File(cl.getResource(fileName).getFile());
-				//BufferedReader f = new BufferedReader(new FileReader(file));
-				BufferedReader f = new BufferedReader(new FileReader(l+fileName));
-				String ln=null;
-				while((ln=f.readLine())!=null){
-					totalValue[i] +=Double.valueOf(ln.substring(ln.lastIndexOf("#")+1));
+		List<MarketWeight> marketCap = portfolioRepository.getMarketWeight(date.getYear()+1900);
+		ArrayList<String> files = new ArrayList<>(6);
+		files.add("VTI");
+		files.add("VTV");
+		files.add("VOE");
+		files.add("VBR");
+		files.add("SHV");
+		files.add("LQD");
+		int i = 0;
+		for(String etf:files){
+			for(MarketWeight cap:marketCap){
+				if(cap.getEtf().equals(etf)){
+					BigDecimal bd = new BigDecimal(cap.getWeight());
+					totalValue[i] = bd.doubleValue();
 				}
-				i++;
-				f.close();
 			}
-		}catch(Exception e){
-			e.printStackTrace();
+			i++;
 		}
 		double total=0;
 		System.out.println("####### Started Printing market cap #####");

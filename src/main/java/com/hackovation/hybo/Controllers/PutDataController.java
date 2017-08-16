@@ -5,8 +5,13 @@ import java.io.File;
 import java.io.FileReader;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
+import java.util.Arrays;
 import java.util.Date;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
 
 import javax.transaction.Transactional;
 
@@ -18,6 +23,7 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.hack17.hybo.domain.IndexPrice;
+import com.hack17.hybo.domain.MarketWeight;
 import com.hack17.hybo.domain.Portfolio;
 import com.hack17.hybo.repository.PortfolioRepository;
 
@@ -33,6 +39,10 @@ public class PutDataController {
 	public void putIndexData() {
 		processFiles();
 	}
+	@RequestMapping(method=RequestMethod.GET,value="/mcap")
+	public void putMarketCapData() {
+		processMarketCap();
+	}
 	
 	public void processFiles(){
 		processFileAndPushInDatabase("CRSP_US_Large_Cap_Historical_Rates.csv","CRSPTM1");
@@ -41,6 +51,27 @@ public class PutDataController {
 		processFileAndPushInDatabase("CRSP_US_Total_Market_Historical_Rates.csv","CRSPSC1");
 		processFileAndPushInDatabaseOverloaded("shv_Historical_Rates.csv","SHV");
 		processFileAndPushInDatabaseOverloaded("lqd_Historical_Rates.csv","LQD");
+	}
+	public void processMarketCap(){
+		List<Integer> yearList = Arrays.asList(2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017);
+		Map<String,Double> dataMap = new LinkedHashMap<>();
+		dataMap.put("VTI",27755725d);
+		dataMap.put("VTV",23745840d);
+		dataMap.put("VOE",4037360d);
+		dataMap.put("VBR",3744125d);
+		dataMap.put("SHV",13908000d);
+		dataMap.put("LQD",175000d);
+		Set<Entry<String,Double>> entrySet = dataMap.entrySet();
+		for(Entry<String,Double> entry:entrySet){
+			for(Integer year:yearList){
+				MarketWeight cap = new MarketWeight();
+				cap.setYear(year);
+				cap.setEtf(entry.getKey());
+				cap.setWeight(entry.getValue());
+				portfolioRepository.persist(cap);
+			}
+		}
+		
 	}
 	public void processFileAndPushInDatabase(String fileName,String index){
 		try{
