@@ -81,7 +81,7 @@ public class PortfolioServiceImpl implements PortfolioService{
 		System.out.println("###### Creating BlackLittermanObject ( -- Market Equilibrium");
 		MarketEquilibrium marketEquilibrium = new MarketEquilibrium(tickers, covarianceMatrix, lambda);
 		BlackLittermanModel bl  = new BlackLittermanModel(marketEquilibrium, marketWeightMatrix);
-		System.out.println("\n\n\n\n\n");
+		System.out.println("\n");
 		System.out.println("###### Adding User View with balenced Confidence");
 		List<BigDecimal> weights = new ArrayList<>();
 		weights.add(new BigDecimal(0));
@@ -91,7 +91,7 @@ public class PortfolioServiceImpl implements PortfolioService{
 		weights.add(new BigDecimal(0));
 		weights.add(new BigDecimal(0));
 		bl.addViewWithBalancedConfidence(weights, 0.26);
-		System.out.println("\n\n\n\n\n");
+		System.out.println("\n");
 		
 /*		System.out.println("--------------Asset Return Matrix---------------------");
 		System.out.println(bl.getAssetReturns());
@@ -99,7 +99,7 @@ public class PortfolioServiceImpl implements PortfolioService{
 		System.out.println("######Asset Weights Calculation Started "+clientId);
 		BasicMatrix finalAssetWeights = bl.getAssetWeights();
 		System.out.println("###### Asset Weights "+finalAssetWeights);
-		System.out.println("\n\n\n\n\n");
+		System.out.println("\n");
 		LinkedHashMap<String, Double> assetClassWiseWeight = new LinkedHashMap<>();
 		long i = 0;
 		for(String assetClass:indexToEtfMap.keySet()){
@@ -166,7 +166,7 @@ public class PortfolioServiceImpl implements PortfolioService{
 			total+=d;
 		}
 		System.out.println("####### Done Printing market cap #####");
-		System.out.println("\n\n\n\n\n");
+		System.out.println("\n");
 		marketWeight[0][0]=totalValue[0]/total;
 		marketWeight[1][0]=totalValue[1]/total;
 		marketWeight[2][0]=totalValue[2]/total;

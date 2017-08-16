@@ -15,6 +15,8 @@ import org.algo.finance.data.GoogleSymbol;
 import org.algo.finance.data.GoogleSymbol.Data;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Repository;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.hack17.hybo.domain.Allocation;
@@ -30,6 +32,7 @@ import com.hackovation.hybo.Util.PathsAsPerAssetClass;
 import com.hackovation.hybo.rebalance.Rebalance;
 
 @Component
+@Service
 public class BasedOnThresholdRebalcing implements Rebalance{
 
 	@Autowired

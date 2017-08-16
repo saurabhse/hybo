@@ -12,6 +12,7 @@ import java.util.Set;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.MediaType;
+import org.springframework.util.StopWatch;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -46,6 +47,8 @@ public class BlackLittermanController {
 	@RequestMapping(value="/createProfile", method=RequestMethod.POST,produces = "application/json",consumes =  MediaType.APPLICATION_JSON_VALUE)
 	public @ResponseBody String createProfileAndCreatePortfolio(HttpEntity<String> entity){
 		String str = "";
+		StopWatch stopWatch = new StopWatch("Started Building Profile");
+		stopWatch.start();
 		try {
 			String json = entity.getBody();
 			ObjectMapper mapper = new ObjectMapper();
@@ -73,6 +76,8 @@ public class BlackLittermanController {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+		stopWatch.stop();
+		System.out.println(stopWatch.shortSummary());
 		return str;
 	}
 	

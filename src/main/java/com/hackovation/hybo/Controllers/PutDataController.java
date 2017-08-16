@@ -16,6 +16,7 @@ import java.util.Set;
 import javax.transaction.Transactional;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.util.StopWatch;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -23,6 +24,7 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.hack17.hybo.domain.IndexPrice;
+import com.hack17.hybo.domain.MarketStatus;
 import com.hack17.hybo.domain.MarketWeight;
 import com.hack17.hybo.domain.Portfolio;
 import com.hack17.hybo.repository.PortfolioRepository;
@@ -37,11 +39,21 @@ public class PutDataController {
 	
 	@RequestMapping(method=RequestMethod.GET,value="/index")
 	public void putIndexData() {
+		System.out.println("Started processing historical data");
+		StopWatch stopWatch = new StopWatch("Historical Data Persistence");
+		stopWatch.start();
 		processFiles();
+		stopWatch.stop();
+		System.out.println(stopWatch.shortSummary());
 	}
 	@RequestMapping(method=RequestMethod.GET,value="/mcap")
 	public void putMarketCapData() {
+		System.out.println("Started processing market cap data");
+		StopWatch stopWatch = new StopWatch("Market Cap Persistence");
+		stopWatch.start();
 		processMarketCap();
+		stopWatch.stop();
+		System.out.println(stopWatch.shortSummary());
 	}
 	
 	public void processFiles(){
@@ -71,6 +83,12 @@ public class PutDataController {
 				portfolioRepository.persist(cap);
 			}
 		}
+		MarketStatus mw = new MarketStatus();
+		mw.setGoingDown(false);
+		mw.setFluctuating(false);
+		mw.setGoingUp(true);
+		portfolioRepository.persist(mw);
+
 		
 	}
 	public void processFileAndPushInDatabase(String fileName,String index){
