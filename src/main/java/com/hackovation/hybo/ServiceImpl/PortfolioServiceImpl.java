@@ -26,6 +26,7 @@ import org.algo.matrix.BigMatrix;
 import org.algo.series.CalendarDateSeries;
 import org.algo.type.CalendarDate;
 import org.algo.type.CalendarDateUnit;
+//import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -53,16 +54,20 @@ public class PortfolioServiceImpl implements PortfolioService{
 	Map<String,String> indexToEtfMap;
 	Map<String,String> EtfToIndexMap;
 	String l = "D:\\MATERIAL\\Hackathon\\Hackovation 2.0\\selected\\hybo\\Workspace\\hybo\\target\\classes\\";
+//	final static Logger logger = Logger.getLogger(PortfolioServiceImpl.class);
 	
 	@Override
 	public Map<String,Portfolio> buildPortfolio(InvestorProfile profile,int clientId,boolean dummy,Date date,int investment) {
-		System.out.println("Building Portfolio Started "+clientId);
+		System.out.println("######## Building Portfolio Started "+clientId);
+	//	logger.info("Aman");
 		EtfToIndexMap = EtfIndexMap.getEtfToIndexMapping();
 		indexToEtfMap = EtfIndexMap.getIndexToEtfMapping();
 		// Step 1. Calculate Covariance Matrix
+		System.out.println("######### Fetching Covariance Matrix "+clientId);
 		BasicMatrix covarianceMatrix = getCovarianceMatrix(date);
-		System.out.println("--------------Covariance Matrix Calculation "+clientId);
-//		System.out.println(covarianceMatrix);
+		System.out.println(covarianceMatrix);
+		System.out.println("######### Done Fetching Covariance Matrix "+clientId);
+		System.out.println("\n\n\n\n\n");
 
 		// Step 2. Calculate Lambda (Risk Aversion Factor)
 		Double lambda = 2.5d;
@@ -70,11 +75,13 @@ public class PortfolioServiceImpl implements PortfolioService{
 		
 		String[] tickers = getAssetsTickers();
 //		double[][] marketWeight = {{0.25},{3},{0.25},{0.25}};
-		System.out.println("--------------Fetching Market Weight Calculation"+clientId);
 		double[][] marketWeight = getMarketWeight();
 		BasicMatrix marketWeightMatrix =  BigMatrix.FACTORY.rows(marketWeight);
+		System.out.println("###### Creating BlackLittermanObject ( -- Market Equilibrium");
 		MarketEquilibrium marketEquilibrium = new MarketEquilibrium(tickers, covarianceMatrix, lambda);
 		BlackLittermanModel bl  = new BlackLittermanModel(marketEquilibrium, marketWeightMatrix);
+		System.out.println("\n\n\n\n\n");
+		System.out.println("###### Adding User View with balenced Confidence");
 		List<BigDecimal> weights = new ArrayList<>();
 		weights.add(new BigDecimal(0));
 		weights.add(new BigDecimal(0));
@@ -83,20 +90,23 @@ public class PortfolioServiceImpl implements PortfolioService{
 		weights.add(new BigDecimal(0));
 		weights.add(new BigDecimal(0));
 		bl.addViewWithBalancedConfidence(weights, 0.26);
+		System.out.println("\n\n\n\n\n");
 		
 /*		System.out.println("--------------Asset Return Matrix---------------------");
 		System.out.println(bl.getAssetReturns());
 */	
-		System.out.println("--------------Asset Weights Calculation Started "+clientId);
+		System.out.println("######Asset Weights Calculation Started "+clientId);
 		BasicMatrix finalAssetWeights = bl.getAssetWeights();
-		System.out.println("--------------Asset Weights "+finalAssetWeights);
+		System.out.println("###### Asset Weights "+finalAssetWeights);
+		System.out.println("\n\n\n\n\n");
 		LinkedHashMap<String, Double> assetClassWiseWeight = new LinkedHashMap<>();
 		long i = 0;
 		for(String assetClass:indexToEtfMap.keySet()){
 			assetClassWiseWeight.put(assetClass, finalAssetWeights.doubleValue(i++));
 		}
 		Map<String,Portfolio> map = buildPortfolio(profile,investment,assetClassWiseWeight,clientId,dummy);
-		System.out.println("Building Portfolio Done "+clientId);
+		System.out.println(" ###### Building Portfolio Done "+clientId);
+		System.out.println(" Done !!!! ");
 		return map;		
 	}
 
@@ -155,8 +165,13 @@ public class PortfolioServiceImpl implements PortfolioService{
 			e.printStackTrace();
 		}
 		double total=0;
-		for(double d:totalValue)
+		System.out.println("####### Started Printing market cap #####");
+		for(double d:totalValue){
+			System.out.println(d);
 			total+=d;
+		}
+		System.out.println("####### Done Printing market cap #####");
+		System.out.println("\n\n\n\n\n");
 		marketWeight[0][0]=totalValue[0]/total;
 		marketWeight[1][0]=totalValue[1]/total;
 		marketWeight[2][0]=totalValue[2]/total;
