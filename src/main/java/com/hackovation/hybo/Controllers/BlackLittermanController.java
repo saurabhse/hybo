@@ -109,7 +109,7 @@ public class BlackLittermanController {
 				ProfileResponse response = new ProfileResponse();
 				response.setClientId(Integer.valueOf(clientId));
 				response.setLabel(allocation.getFund().getTicker());
-				response.setValue(String.valueOf(allocation.getCostPrice()));
+				response.setValue(String.valueOf(allocation.getCostPrice()*allocation.getQuantity()));
 				responseList.add(response);
 			}
 			ObjectMapper responseMapper = new ObjectMapper();
