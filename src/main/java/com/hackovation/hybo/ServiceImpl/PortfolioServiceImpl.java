@@ -5,6 +5,9 @@ import java.io.File;
 import java.io.FileReader;
 import java.math.BigDecimal;
 import java.text.NumberFormat;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collection;
@@ -109,7 +112,7 @@ public class PortfolioServiceImpl implements PortfolioService{
 		for(String assetClass:indexToEtfMap.keySet()){
 			assetClassWiseWeight.put(assetClass, finalAssetWeights.doubleValue(i++));
 		}
-		Map<String,Portfolio> map = buildPortfolio(profile,investment,assetClassWiseWeight,clientId,dummy);
+		Map<String,Portfolio> map = buildPortfolio(profile,investment,assetClassWiseWeight,clientId,dummy,date);
 		System.out.println(" ###### Building Portfolio Done "+clientId);
 		System.out.println(" Done !!!! ");
 		return map;		
@@ -207,12 +210,12 @@ public class PortfolioServiceImpl implements PortfolioService{
 		return series;
 	}
 
-	public Map<String,Portfolio> buildPortfolio(InvestorProfile profile,int investment,LinkedHashMap<String, Double> assetClassWiseWeight,int clientId,boolean dummy){
+	public Map<String,Portfolio> buildPortfolio(InvestorProfile profile,int investment,LinkedHashMap<String, Double> assetClassWiseWeight,int clientId,boolean dummy,Date date){
 		Portfolio portfolio = new Portfolio();
 		portfolio.setClientId(clientId);
 		List<Allocation> allocationList = new ArrayList<>();
 		Map<String, Portfolio> portfolioMap = new HashMap<>();
-		Date date = new Date();
+		Date currentDate = new Date();
 		for(String assetClass:indexToEtfMap.keySet()){
 			Allocation allocation = new Allocation();
 			String etf = indexToEtfMap.get(assetClass);
@@ -221,8 +224,7 @@ public class PortfolioServiceImpl implements PortfolioService{
 	 		List<Data> dataList = gs.getHistoricalPrices();
 	 		Double cost = investment*assetClassWiseWeight.get(assetClass);
 	 		if(dataList != null && dataList.size()>0){
-	 			Data data = dataList.get(0);
-	 			double perIndexCost = data.getPrice();
+	 			double perIndexCost = getIndexPriceForDate(dataList, date);
 	 			NumberFormat nf = NumberFormat.getInstance();
 	 			System.out.println("Asset Class: "+assetClass+" Weight: "+assetClassWiseWeight.get(assetClass)+" Cost: "+cost +" PerIndexCost: "+perIndexCost);
 	 			allocation.setQuantity(Double.valueOf((cost/perIndexCost)).intValue());
@@ -230,7 +232,7 @@ public class PortfolioServiceImpl implements PortfolioService{
 	 			allocation.setInvestment(investment);
 	 			allocation.setPercentage(assetClassWiseWeight.get(assetClass)*100);
 	 			allocation.setType(AllocationType.EQ.name());
-	 			allocation.setTransactionDate(date);
+	 			allocation.setTransactionDate(currentDate);
 	 			allocation.setIsActive("Y");
 	 			fund.setTicker(indexToEtfMap.get(assetClass));
 	 			allocation.setFund(fund);
@@ -247,6 +249,24 @@ public class PortfolioServiceImpl implements PortfolioService{
 		return portfolioMap;
 	}
 
+	private double getIndexPriceForDate(List<Data> dataList,Date date){
+		double perIndexCost = 0d;
+		Calendar cal = Calendar.getInstance();
+		cal.setTime(date);
+		cal.add(Calendar.DATE, -1);
+		
+		cal = trimTime(cal);
+		for(Data data:dataList){
+			Calendar dateCal = trimTime(data.getKey().toCalendar());
+			dateCal = trimTime(dateCal);
+			if(trimTime(data.getKey().toCalendar()).equals(cal)){
+				perIndexCost = data.getPrice();
+				System.out.println("price : "+perIndexCost);
+				break;
+			}
+		}
+		return perIndexCost;
+	}
 	@Override
 	public void deleteAllPortfolio() {
 		List<Portfolio> listOfPortfolios =  portfolioRepository.getAllPortfolios();
@@ -265,5 +285,14 @@ public class PortfolioServiceImpl implements PortfolioService{
 		profile.setHorizonAsOfDate(cal.getTime());
 		portfolioRepository.persist(profile);
 		return profile;
+	}
+	
+	private Calendar trimTime(Calendar cal){
+		cal.set(Calendar.HOUR_OF_DAY,0);
+		cal.set(Calendar.MINUTE,0);
+		cal.set(Calendar.SECOND,0);
+		cal.set(Calendar.MILLISECOND,0);
+	//	cal.set(Calendar.ZONE_OFFSET,0);
+		return cal;
 	}
 }

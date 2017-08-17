@@ -1,20 +1,17 @@
 package com.hackovation.hybo.bean;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
+@JsonIgnoreProperties
 public class ProfileRequest {
 	public ProfileRequest() {
-	}
-	public ProfileRequest(int age, int amount, int time, String risk, int income) {
-		this.age = age;
-		this.amount = amount;
-		this.time = time;
-		this.risk = risk;
-		this.income = income;
 	}
 	int age;
 	int amount;
 	int time;
 	String risk;
 	int income;
+	String date;
 	public int getAge() {
 		return age;
 	}
@@ -44,6 +41,12 @@ public class ProfileRequest {
 	}
 	public void setIncome(int income) {
 		this.income = income;
+	}
+	public String getDate() {
+		return date;
+	}
+	public void setDate(String date) {
+		this.date = date;
 	}
 	
 

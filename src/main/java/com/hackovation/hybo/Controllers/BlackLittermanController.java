@@ -1,6 +1,7 @@
 package com.hackovation.hybo.Controllers;
 
 import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -49,13 +50,20 @@ public class BlackLittermanController {
 		String str = "";
 		StopWatch stopWatch = new StopWatch("Started Building Profile");
 		stopWatch.start();
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd");
 		try {
 			String json = entity.getBody();
 			ObjectMapper mapper = new ObjectMapper();
 			ProfileRequest profileRequest;
 			profileRequest = mapper.readValue(json, ProfileRequest.class);
 			InvestorProfile investorProfile = portfolioService.createProfile(profileRequest);
-			Map<String,Portfolio> dataMap = createPortfolio(investorProfile, profileRequest.getAmount());
+			Date date = new Date();
+			if(profileRequest.getDate() != null && !profileRequest.getDate().isEmpty()){
+				date = sdf.parse(profileRequest.getDate());
+			}
+			Map<String,Portfolio> dataMap = createPortfolio(investorProfile, profileRequest.getAmount(),date);
+			
+			
 			List<ProfileResponse> responseList = new ArrayList<>();
 			Set<Entry<String,Portfolio>> entrySet = dataMap.entrySet();
 			Map<String,String> etfAssetClassMap = EtfIndexMap.ETFToAssetClassMap();
@@ -81,10 +89,10 @@ public class BlackLittermanController {
 		return str;
 	}
 	
-	public Map<String,Portfolio> createPortfolio(InvestorProfile profile,int investment) throws Exception{
+	public Map<String,Portfolio> createPortfolio(InvestorProfile profile,int investment,Date date) throws Exception{
 		Random random  = new Random();
 		int clientId = random.nextInt(10000000);
-		return portfolioService.buildPortfolio(profile,clientId,false,new Date(),investment);
+		return portfolioService.buildPortfolio(profile,clientId,false,date,investment);
 	}
 	
 	@RequestMapping(value="/getPortfolioCid", method=RequestMethod.GET,produces = "application/json")
