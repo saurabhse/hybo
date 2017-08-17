@@ -215,16 +215,19 @@ public class PortfolioServiceImpl implements PortfolioService{
 		portfolio.setClientId(clientId);
 		List<Allocation> allocationList = new ArrayList<>();
 		Map<String, Portfolio> portfolioMap = new HashMap<>();
-		Date currentDate = new Date();
 		for(String assetClass:indexToEtfMap.keySet()){
 			Allocation allocation = new Allocation();
 			String etf = indexToEtfMap.get(assetClass);
 			Fund fund  = fundRepository.findFund(etf);
-	 		GoogleSymbol gs = new GoogleSymbol(indexToEtfMap.get(assetClass));
-	 		List<Data> dataList = gs.getHistoricalPrices();
+//	 		GoogleSymbol gs = new GoogleSymbol(indexToEtfMap.get(assetClass));
+	// 		List<Data> dataList = gs.getHistoricalPrices();
 	 		Double cost = investment*assetClassWiseWeight.get(assetClass);
-	 		if(dataList != null && dataList.size()>0){
-	 			double perIndexCost = getIndexPriceForDate(dataList, date);
+	 //		if(dataList != null && dataList.size()>0){
+//				double perIndexCost = getIndexPriceForDate(dataList, date);
+		 		Calendar cal = Calendar.getInstance();
+		 		cal.setTime(date);
+		 		cal = trimTime(cal);
+				double perIndexCost = portfolioRepository.getIndexPriceForGivenDate(indexToEtfMap.get(assetClass), cal.getTime());
 	 			NumberFormat nf = NumberFormat.getInstance();
 	 			System.out.println("Asset Class: "+assetClass+" Weight: "+assetClassWiseWeight.get(assetClass)+" Cost: "+cost +" PerIndexCost: "+perIndexCost);
 	 			allocation.setQuantity(Double.valueOf((cost/perIndexCost)).intValue());
@@ -232,12 +235,12 @@ public class PortfolioServiceImpl implements PortfolioService{
 	 			allocation.setInvestment(investment);
 	 			allocation.setPercentage(assetClassWiseWeight.get(assetClass)*100);
 	 			allocation.setType(AllocationType.EQ.name());
-	 			allocation.setTransactionDate(currentDate);
+	 			allocation.setTransactionDate(date);
 	 			allocation.setIsActive("Y");
 	 			fund.setTicker(indexToEtfMap.get(assetClass));
 	 			allocation.setFund(fund);
 	 			allocationList.add(allocation);
-	 		}
+	 	//	}
 		}
 		portfolio.setAllocations(allocationList);
 		//System.out.println(portfolioRepository.getPortfolio(1));
@@ -295,4 +298,18 @@ public class PortfolioServiceImpl implements PortfolioService{
 	//	cal.set(Calendar.ZONE_OFFSET,0);
 		return cal;
 	}
+	
+/*	public double getYearStartValueOfPortfolio(Portfolio portfolio,Date date){
+		double yearStartValue = 0d;
+		List<Allocation> allocationList = portfolio.getAllocations();
+		for(Allocation allocation:allocationList){
+			String ticker = allocation.getFund().getTicker();
+			int quantity = allocation.getQuantity();
+			GoogleSymbol gs = new GoogleSymbol(ticker);
+	 		List<Data> dataList = gs.getHistoricalPrices();
+ 			double perIndexCost = getIndexPriceForDate(dataList, date);
+ 			yearStartValue+=perIndexCost*quantity;
+		}
+		
+	}*/
 }

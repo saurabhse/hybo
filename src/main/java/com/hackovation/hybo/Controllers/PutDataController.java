@@ -73,6 +73,10 @@ public class PutDataController {
 		processFileAndPushInDatabase("CRSP_US_Total_Market_Historical_Rates.csv","CRSPSC1");
 		processFileAndPushInDatabaseOverloaded("shv_Historical_Rates.csv","SHV");
 		processFileAndPushInDatabaseOverloaded("lqd_Historical_Rates.csv","LQD");
+		processFileAndPushInDatabaseOverloaded("vti.csv","VTI");
+		processFileAndPushInDatabaseOverloaded("vtv.csv","VTV");
+		processFileAndPushInDatabaseOverloaded("voe.csv","VOE");
+		processFileAndPushInDatabaseOverloaded("vbr.csv","VBR");
 	}
 	public void processMarketCap(){
 		List<Integer> yearList = Arrays.asList(2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017);
