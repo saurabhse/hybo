@@ -23,6 +23,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.hack17.hybo.domain.Fund;
 import com.hack17.hybo.domain.IndexPrice;
 import com.hack17.hybo.domain.MarketStatus;
 import com.hack17.hybo.domain.MarketWeight;
@@ -52,6 +53,15 @@ public class PutDataController {
 		StopWatch stopWatch = new StopWatch("Market Cap Persistence");
 		stopWatch.start();
 		processMarketCap();
+		stopWatch.stop();
+		System.out.println(stopWatch.shortSummary());
+	}
+	@RequestMapping(method=RequestMethod.GET,value="/fund")
+	public void putFundTickers() {
+		System.out.println("Started processing fund tickers");
+		StopWatch stopWatch = new StopWatch("Fund Tickers Persistence");
+		stopWatch.start();
+		putFund();
 		stopWatch.stop();
 		System.out.println(stopWatch.shortSummary());
 	}
@@ -88,8 +98,14 @@ public class PutDataController {
 		mw.setFluctuating(false);
 		mw.setGoingUp(true);
 		portfolioRepository.persist(mw);
-
-		
+	}
+	
+	public void putFund(){
+		List<String> tickers = Arrays.asList("VTI","VTV","VOE","VBR","SHV","LQD");
+		for(String tick:tickers){
+			Fund f = new Fund(tick);
+			portfolioRepository.persist(f);
+		}
 	}
 	public void processFileAndPushInDatabase(String fileName,String index){
 		try{

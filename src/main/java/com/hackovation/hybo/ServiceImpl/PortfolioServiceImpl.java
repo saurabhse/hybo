@@ -38,6 +38,7 @@ import com.hack17.hybo.domain.InvestorProfile;
 import com.hack17.hybo.domain.MarketWeight;
 import com.hack17.hybo.domain.Portfolio;
 import com.hack17.hybo.domain.RiskTolerance;
+import com.hack17.hybo.repository.FundRepository;
 import com.hack17.hybo.repository.PortfolioRepository;
 import com.hackovation.hybo.AllocationType;
 import com.hackovation.hybo.ReadFile;
@@ -51,6 +52,9 @@ public class PortfolioServiceImpl implements PortfolioService{
 
 	@Autowired
 	PortfolioRepository portfolioRepository;
+	
+	@Autowired
+	FundRepository fundRepository;
 
 	Map<String,String> indexToEtfMap;
 	Map<String,String> EtfToIndexMap;
@@ -211,7 +215,8 @@ public class PortfolioServiceImpl implements PortfolioService{
 		Date date = new Date();
 		for(String assetClass:indexToEtfMap.keySet()){
 			Allocation allocation = new Allocation();
-			Fund fund = new Fund();
+			String etf = indexToEtfMap.get(assetClass);
+			Fund fund  = fundRepository.findFund(etf);
 	 		GoogleSymbol gs = new GoogleSymbol(indexToEtfMap.get(assetClass));
 	 		List<Data> dataList = gs.getHistoricalPrices();
 	 		Double cost = investment*assetClassWiseWeight.get(assetClass);
