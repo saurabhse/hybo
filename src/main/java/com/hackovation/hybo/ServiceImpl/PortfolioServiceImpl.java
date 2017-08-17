@@ -228,7 +228,7 @@ public class PortfolioServiceImpl implements PortfolioService{
 	 			NumberFormat nf = NumberFormat.getInstance();
 	 			System.out.println("Asset Class: "+assetClass+" Weight: "+assetClassWiseWeight.get(assetClass)+" Cost: "+cost +" PerIndexCost: "+perIndexCost);
 	 			allocation.setQuantity(Double.valueOf((cost/perIndexCost)).intValue());
-	 			allocation.setCostPrice(allocation.getQuantity()*perIndexCost);
+	 			allocation.setCostPrice(perIndexCost);
 	 			allocation.setInvestment(investment);
 	 			allocation.setPercentage(assetClassWiseWeight.get(assetClass)*100);
 	 			allocation.setType(AllocationType.EQ.name());
