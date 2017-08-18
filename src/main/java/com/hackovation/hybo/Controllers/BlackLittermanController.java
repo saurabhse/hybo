@@ -189,6 +189,7 @@ public class BlackLittermanController {
 		StopWatch stopWatch = new StopWatch("All Portoflio Deletion!!");
 		stopWatch.start();
 		portfolioService.deleteAllPortfolio();
+		portfolioService.deleteAllPortfolio();
 		stopWatch.stop();
 		System.out.println(stopWatch.shortSummary());
 	}

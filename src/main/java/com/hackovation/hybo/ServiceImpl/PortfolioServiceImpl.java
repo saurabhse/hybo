@@ -1,13 +1,7 @@
 package com.hackovation.hybo.ServiceImpl;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
 import java.math.BigDecimal;
 import java.text.NumberFormat;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collection;
@@ -17,10 +11,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import javax.persistence.EntityTransaction;
 
 import org.algo.finance.FinanceUtils;
-import org.algo.finance.data.GoogleSymbol;
 import org.algo.finance.data.GoogleSymbol.Data;
 import org.algo.finance.portfolio.BlackLittermanModel;
 import org.algo.finance.portfolio.MarketEquilibrium;
@@ -29,7 +21,6 @@ import org.algo.matrix.BigMatrix;
 import org.algo.series.CalendarDateSeries;
 import org.algo.type.CalendarDate;
 import org.algo.type.CalendarDateUnit;
-//import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -45,7 +36,6 @@ import com.hack17.hybo.repository.FundRepository;
 import com.hack17.hybo.repository.PortfolioRepository;
 import com.hackovation.hybo.AllocationType;
 import com.hackovation.hybo.CreatedBy;
-import com.hackovation.hybo.ReadFile;
 import com.hackovation.hybo.Util.HyboUtil;
 import com.hackovation.hybo.bean.ProfileRequest;
 import com.hackovation.hybo.services.PortfolioService;
@@ -278,6 +268,8 @@ public class PortfolioServiceImpl implements PortfolioService{
 		List<Portfolio> listOfPortfolios =  portfolioRepository.getAllPortfolios();
 		
 		for(Portfolio port:listOfPortfolios)portfolioRepository.delete(port);
+		List<InvestorProfile> listInvestorProfiles =  portfolioRepository.getAllInvestorProfile();
+		for(InvestorProfile obj:listInvestorProfiles)portfolioRepository.delete(obj);
 	}
 
 	@Override
@@ -289,6 +281,7 @@ public class PortfolioServiceImpl implements PortfolioService{
 		Calendar cal = Calendar.getInstance();
 		cal.add(Calendar.YEAR, horizonOffsetYear);
 		profile.setHorizonAsOfDate(cal.getTime());
+		profile.setInvestmentHorizonInMonths(horizonOffsetYear*12);
 		portfolioRepository.persist(profile);
 		return profile;
 	}

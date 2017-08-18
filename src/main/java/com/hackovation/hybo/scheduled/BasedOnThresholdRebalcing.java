@@ -23,6 +23,7 @@ import com.hack17.hybo.domain.Portfolio;
 import com.hack17.hybo.domain.RiskTolerance;
 import com.hack17.hybo.repository.PortfolioRepository;
 import com.hack17.hybo.service.DBLoggerService;
+import com.hack17.hybo.util.DateTimeUtil;
 import com.hackovation.hybo.AllocationType;
 import com.hackovation.hybo.CreatedBy;
 import com.hackovation.hybo.Util.HyboUtil;
@@ -73,6 +74,9 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 		Set<Entry<Portfolio,List<Allocation>>> entrySet = groupWisePortfolio.entrySet();
 		for(Entry<Portfolio,List<Allocation>> entry:entrySet){
 			Portfolio portfolio = entry.getKey();
+			
+			if(!shouldTriggerRebalance(portfolio,date))continue;
+			
 			List<Allocation> portfolioList = entry.getValue();
 			System.out.println("Rebalancing ... "+portfolio);
 			rebalancePortfolio(portfolio,portfolioList,date);
@@ -80,6 +84,33 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 		
 		System.out.println("Rebalancing Done !!! ");
 		
+	}
+	
+	private boolean shouldTriggerRebalance(Portfolio portfolio,Date currentDate){
+		boolean trigger = false;
+		
+		int horizonInMonths = portfolio.getInvestorProfile().getInvestmentHorizonInMonths();
+		Date activeAllocationDate = null;
+		List<Allocation> allocationList = portfolio.getAllocations();
+		for(Allocation allocation:allocationList){
+			if(allocation.getIsActive().equals("Y")){
+				activeAllocationDate = allocation.getTransactionDate();
+			}
+		}
+		int days = DateTimeUtil.getDateDifferenceInDays(currentDate, activeAllocationDate);
+		if(days<30){
+			System.out.println("Not trigerring portfolio for "+portfolio.getClientId()+". Days difference: "+days);
+		}else if(days>=30 && horizonInMonths>=60){
+			System.out.println("Triggering portfolio for "+portfolio.getClientId()+". Days difference: "+days);
+			trigger = true;
+		}else if(days>=180){
+			System.out.println("Triggering portfolio for "+portfolio.getClientId()+". Days difference: "+days);
+			trigger = true;
+		}else{
+			trigger = false;
+			System.out.println("Not trigerring portfolio for "+portfolio.getClientId()+". Days difference: "+days);
+		}
+		return trigger;
 	}
 	
 	/*
@@ -98,31 +129,34 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 			double initialEQSum = getTotalValue(eqAllocationList);
 		}
 		
-		rebalanceEquity(portfolio,eqAllocationList,bondAllocationList,date);
-		rebalanceBond(portfolio, bondAllocationList, date);
+		List<Allocation> newAllocationList = rebalanceEquity(portfolio,eqAllocationList,bondAllocationList,date);
+		if(newAllocationList != null && newAllocationList.size()>0)
+			rebalanceBond(portfolio, bondAllocationList,newAllocationList,date);
 		
 	}
-	public void rebalanceBond(Portfolio portfolio,List<Allocation> bondAllocationList,Date date){
-		List<Allocation> updatedBondAllocationList = new ArrayList<>();
+	public void rebalanceBond(Portfolio portfolio,List<Allocation> bondAllocationList,List<Allocation>updatedAllocationList,Date date){
+		List<Allocation> updatedBondAllocationList = updatedAllocationList;
 		Calendar cal = Calendar.getInstance();
  		cal.setTime(date);
  		cal = trimTime(cal);
  		Date currentDate = cal.getTime();
  		for(Allocation existingAllocation:bondAllocationList){
 			Allocation newAllocation = copyAllocationInNewObject(existingAllocation, currentDate);
-			existingAllocation.setIsActive("N");
 			updatedBondAllocationList.add(newAllocation);
 		}
-		updatedBondAllocationList.addAll(bondAllocationList);
-		updatedBondAllocationList.addAll(portfolio.getAllocations());
-		portfolio.setAllocations(updatedBondAllocationList);
-		portfolioRepository.persist(portfolio);
+ 		persistPortfolio(portfolio, updatedAllocationList);
 	}
 	
 	public HashMap<AllocationType, List<Allocation>> getAllocationBasedOnType(List<Allocation> portfolioList){
 		HashMap<AllocationType,List<Allocation>> map = new HashMap<>();
-		List<Allocation> EQList = portfolioList.stream().filter(a->a.getType().equals(AllocationType.EQ.name())).collect(Collectors.toList());
-		List<Allocation> BONDList = portfolioList.stream().filter(a->a.getType().equals(AllocationType.BOND.name())).collect(Collectors.toList());
+		List<Allocation> activeAllocations = new ArrayList<>();
+		for(Allocation allocation:portfolioList){
+			if(allocation.getIsActive().equals("Y"))
+				activeAllocations.add(allocation);
+		}
+		
+		List<Allocation> EQList = activeAllocations.stream().filter(a->a.getType().equals(AllocationType.EQ.name())).collect(Collectors.toList());
+		List<Allocation> BONDList = activeAllocations.stream().filter(a->a.getType().equals(AllocationType.BOND.name())).collect(Collectors.toList());
 		map.put(AllocationType.EQ, EQList);
 		map.put(AllocationType.BOND, BONDList);
 		return map;
@@ -155,31 +189,33 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 		return sum;
 	}
 	
-	public void rebalanceEquity(Portfolio portfolio, List<Allocation> equityAllocationList,List<Allocation> bondAllocationList,Date date){
-		
-		
-		
-		MarketStatus marketStatus = (MarketStatus)portfolioRepository.getEntity(1, MarketStatus.class);
-		InvestorProfile profile = portfolio.getInvestorProfile();
-		RiskTolerance riskTolerance = profile.getRiskTolerance();
-		
-		if(riskTolerance.equals(RiskTolerance.VERY_HIGH) && marketStatus.isGoingUp){
-			System.out.println(" Not rebalancing because RiskToleranc is High and Market is going up.");
-			return;
+	public List<Allocation> rebalanceEquity(Portfolio portfolio, List<Allocation> equityAllocationList,List<Allocation> bondAllocationList,Date date){
+		List<Allocation> newAllocationList = new ArrayList<>();
+		try{
+			MarketStatus marketStatus = (MarketStatus)portfolioRepository.getEntity(1, MarketStatus.class);
+			InvestorProfile profile = portfolio.getInvestorProfile();
+			RiskTolerance riskTolerance = profile.getRiskTolerance();
+			
+			if(riskTolerance.equals(RiskTolerance.VERY_HIGH) && marketStatus.isGoingUp){
+				System.out.println(" Not rebalancing because RiskToleranc is High and Market is going up.");
+			}
+			else if(riskTolerance.equals(RiskTolerance.MODERATE) && marketStatus.isFluctuating){
+				System.out.println(" Tiered Rebalncing because RiskToleranc is Moderate/Mediun and Market is fluctuating.");
+				newAllocationList = tieredBasedRebalancing(portfolio, equityAllocationList,date);
+			}
+			else if(riskTolerance.equals(RiskTolerance.HIGH) && (marketStatus.isGoingDown || marketStatus.isGoingUp)){
+				System.out.println(" Formula Based Rebalncing because RiskToleranc is High and Market is not fluctuating.");
+				newAllocationList = formulaBasedRebalancing(portfolio, equityAllocationList,bondAllocationList,date);
+			}else{
+				System.out.println(" Not rebalancing no condition match.");
+			}
+		}catch(Exception e){
+			e.printStackTrace();
 		}
-		if(riskTolerance.equals(RiskTolerance.MODERATE) && marketStatus.isFluctuating){
-			System.out.println(" Tiered Rebalncing because RiskToleranc is Moderate/Mediun and Market is fluctuating.");
-			tieredBasedRebalancing(portfolio, equityAllocationList,date);
-			return;
-		}
-		if(riskTolerance.equals(RiskTolerance.HIGH) && (marketStatus.isGoingDown || marketStatus.isGoingUp)){
-			System.out.println(" Formula Based Rebalncing because RiskToleranc is High and Market is not fluctuating.");
-			formulaBasedRebalancing(portfolio, equityAllocationList,bondAllocationList,date);
-		}
-		
+		return newAllocationList;
 	}
 	
-	private void tieredBasedRebalancing(Portfolio portfolio, List<Allocation> equityAllocationList,Date date){
+	private List<Allocation> tieredBasedRebalancing(Portfolio portfolio, List<Allocation> equityAllocationList,Date date){
 		HashMap<String,Double> existPercMap = new HashMap<>();
 		HashMap<String, Double> newPercMap = new HashMap<>();
 		HashMap<String, Double> newPricesPerETF = new HashMap<>();
@@ -248,15 +284,10 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 		for(Allocation allocation:newAllocationList){
 			allocation.setInvestment(newInvestment);
 		}
-		
-		for(Allocation allocation:equityAllocationList)
-			allocation.setIsActive("N");
-		newAllocationList.addAll(equityAllocationList);
-		portfolio.setAllocations(newAllocationList);
-		portfolioRepository.persist(portfolio);		
+		return newAllocationList;
 	}
 	
-	public void formulaBasedRebalancing(Portfolio portfolio, List<Allocation> equityAllocationList,List<Allocation> bondAllocationList,Date date){
+	public List<Allocation> formulaBasedRebalancing(Portfolio portfolio, List<Allocation> equityAllocationList,List<Allocation> bondAllocationList,Date date){
 		double totalInvestment = 0.0;
 		RiskTolerance riskTolerance = portfolio.getInvestorProfile().getRiskTolerance();
 		List<Allocation> newAllocationList = new ArrayList<>();
@@ -307,13 +338,7 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 			newAllocationList.add(newAllocation);
 			log(allocation, newAllocation, currentDate);
 		}
-		for(Allocation allocation:equityAllocationList)
-			allocation.setIsActive("N");
-		newAllocationList.addAll(equityAllocationList);
-//		equityAllocationList.addAll(equityAllocationList);
-		portfolio.setAllocations(newAllocationList);
-		portfolioRepository.persist(portfolio);
-		
+		return newAllocationList;
 	}
 	private int getFloorValue(RiskTolerance riskTolerance,double totalInvestment){
 		int floorValue = 0;
@@ -383,6 +408,15 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 	//	cal.set(Calendar.ZONE_OFFSET,0);
 		return cal;
 	}
+	
+	private void persistPortfolio(Portfolio portfolio,List<Allocation> newAllocationList){
+		List<Allocation> existingAllocations = portfolio.getAllocations();
+		for(Allocation allocation:existingAllocations)allocation.setIsActive("N");
+		existingAllocations.addAll(newAllocationList);
+		portfolio.setAllocations(existingAllocations);
+		portfolioRepository.persist(portfolio);
+	}
+	
 	
 /*	
  	public void rebalancePortfolio(Portfolio portfolio,List<Allocation> actualAllocationList){
