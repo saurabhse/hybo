@@ -141,7 +141,7 @@ public class BlackLittermanController {
 			List<ProfileResponse> responseList = new ArrayList<>();
 			List<Allocation> allocationList = portfolio.getAllocations();
 			for(Allocation allocation:allocationList){
-				if(allocation.getCostPrice()==0d)continue;
+				if(allocation.getCostPrice()==0d || allocation.getIsActive().equals("N"))continue;
 				ProfileResponse response = new ProfileResponse();
 				response.setClientId(Integer.valueOf(clientId));
 				response.setLabel(allocation.getFund().getTicker());
