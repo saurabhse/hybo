@@ -27,7 +27,7 @@ import com.hack17.hybo.domain.Allocation;
 import com.hack17.hybo.domain.InvestorProfile;
 import com.hack17.hybo.domain.Portfolio;
 import com.hack17.hybo.repository.PortfolioRepository;
-import com.hackovation.hybo.Util.EtfIndexMap;
+import com.hackovation.hybo.Util.HyboUtil;
 import com.hackovation.hybo.bean.ProfileRequest;
 import com.hackovation.hybo.bean.ProfileResponse;
 import com.hackovation.hybo.rebalance.Rebalance;
@@ -68,7 +68,7 @@ public class BlackLittermanController {
 			
 			List<ProfileResponse> responseList = new ArrayList<>();
 			Set<Entry<String,Portfolio>> entrySet = dataMap.entrySet();
-			Map<String,String> etfAssetClassMap = EtfIndexMap.ETFToAssetClassMap();
+			Map<String,String> etfAssetClassMap = HyboUtil.ETFToAssetClassMap();
 			for(Entry<String,Portfolio> entry:entrySet){
 				Portfolio portfolio= entry.getValue();
 				List<Allocation> allocationList = portfolio.getAllocations();

@@ -1,9 +1,12 @@
 package com.hackovation.hybo.Util;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
-public class EtfIndexMap {
+import com.hackovation.hybo.AllocationType;
+
+public class HyboUtil {
 	public static Map<String,String> getIndexToEtfMapping(){
 		Map<String,String> map = new HashMap<>();
 		map.put("CRSPTM1", "VTI");
@@ -35,5 +38,15 @@ public class EtfIndexMap {
 		map.put("SHV","Short Term Treasuries");
 		map.put("LQD","US Investment Grade Bonds");
 		return map;
+	}
+	public static Map<String,AllocationType> getAllocationTypeMap(){
+		Map<String,AllocationType> allocationTypeMap = new HashMap<>();
+		allocationTypeMap.put("VTI",AllocationType.EQ);
+		allocationTypeMap.put("VTV",AllocationType.EQ);
+		allocationTypeMap.put("VOE",AllocationType.EQ);
+		allocationTypeMap.put("VBR",AllocationType.EQ);
+		allocationTypeMap.put("SHV",AllocationType.BOND);
+		allocationTypeMap.put("LQD",AllocationType.BOND);
+		return allocationTypeMap;
 	}
 }

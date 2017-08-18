@@ -24,7 +24,8 @@ import com.hack17.hybo.domain.RiskTolerance;
 import com.hack17.hybo.repository.PortfolioRepository;
 import com.hack17.hybo.service.DBLoggerService;
 import com.hackovation.hybo.AllocationType;
-import com.hackovation.hybo.Util.EtfIndexMap;
+import com.hackovation.hybo.CreatedBy;
+import com.hackovation.hybo.Util.HyboUtil;
 import com.hackovation.hybo.Util.PathsAsPerAssetClass;
 import com.hackovation.hybo.rebalance.Rebalance;
 
@@ -60,8 +61,8 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 	public void rebalance(Date date) {
 		System.out.println("Cron Running");
 		System.out.println("Rebalancing Started!!!");
-		EtfToIndexMap = EtfIndexMap.getEtfToIndexMapping();
-		indexToEtfMap = EtfIndexMap.getIndexToEtfMapping();
+		EtfToIndexMap = HyboUtil.getEtfToIndexMapping();
+		indexToEtfMap = HyboUtil.getIndexToEtfMapping();
 
 		List<Portfolio> listOfPortfolios =  portfolioRepository.getAllPortfoliosBeforeDate(date);
 		
@@ -98,9 +99,25 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 		}
 		
 		rebalanceEquity(portfolio,eqAllocationList,bondAllocationList,date);
+		rebalanceBond(portfolio, bondAllocationList, date);
 		
 	}
-	
+	public void rebalanceBond(Portfolio portfolio,List<Allocation> bondAllocationList,Date date){
+		List<Allocation> updatedBondAllocationList = new ArrayList<>();
+		Calendar cal = Calendar.getInstance();
+ 		cal.setTime(date);
+ 		cal = trimTime(cal);
+ 		Date currentDate = cal.getTime();
+ 		for(Allocation existingAllocation:bondAllocationList){
+			Allocation newAllocation = copyAllocationInNewObject(existingAllocation, currentDate);
+			existingAllocation.setIsActive("N");
+			updatedBondAllocationList.add(newAllocation);
+		}
+		updatedBondAllocationList.addAll(bondAllocationList);
+		updatedBondAllocationList.addAll(portfolio.getAllocations());
+		portfolio.setAllocations(updatedBondAllocationList);
+		portfolioRepository.persist(portfolio);
+	}
 	
 	public HashMap<AllocationType, List<Allocation>> getAllocationBasedOnType(List<Allocation> portfolioList){
 		HashMap<AllocationType,List<Allocation>> map = new HashMap<>();
@@ -230,7 +247,6 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 		
 		for(Allocation allocation:newAllocationList){
 			allocation.setInvestment(newInvestment);
-			allocation.setIsActive("Y");
 		}
 		
 		for(Allocation allocation:equityAllocationList)
@@ -243,12 +259,13 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 	public void formulaBasedRebalancing(Portfolio portfolio, List<Allocation> equityAllocationList,List<Allocation> bondAllocationList,Date date){
 		double totalInvestment = 0.0;
 		RiskTolerance riskTolerance = portfolio.getInvestorProfile().getRiskTolerance();
+		List<Allocation> newAllocationList = new ArrayList<>();
 		if(equityAllocationList != null && equityAllocationList.size()>0)
 			totalInvestment+= equityAllocationList.get(0).getInvestment();
 		
-		if(bondAllocationList != null && bondAllocationList.size()>0)
+		/*if(bondAllocationList != null && bondAllocationList.size()>0)
 			totalInvestment+= bondAllocationList.get(0).getInvestment();
-		
+		*/
 		
 		final int m = 2;
 		final int floor = getFloorValue(riskTolerance, totalInvestment);
@@ -273,14 +290,13 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 		
 		double equityPortion = m*(currentValueOfPortfolio-floor);
 		Date currentDate = cal.getTime();
-		List<Allocation> newAllocationList = new ArrayList<>();
 		double investment = 0;
 		for(Allocation allocation : equityAllocationList){
 			String ticker = allocation.getFund().getTicker();
 			Allocation newAllocation = copyAllocationInNewObject(allocation, currentDate);
 			double perc = existPercMap.get(ticker);
 			double etfTodayPrice = newPricesPerETF.get(ticker);
-			double cost = equityPortion*perc;
+			double cost = (equityPortion*perc)/100;
 			int number = Double.valueOf(cost/etfTodayPrice).intValue();
 			cost = etfTodayPrice;
 			investment += cost*number;
@@ -293,9 +309,9 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 		}
 		for(Allocation allocation:equityAllocationList)
 			allocation.setIsActive("N");
-		equityAllocationList.addAll(newAllocationList);
-		equityAllocationList.addAll(bondAllocationList);
-		portfolio.setAllocations(equityAllocationList);
+		newAllocationList.addAll(equityAllocationList);
+//		equityAllocationList.addAll(equityAllocationList);
+		portfolio.setAllocations(newAllocationList);
 		portfolioRepository.persist(portfolio);
 		
 	}
@@ -318,7 +334,8 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 		newAllocation.setPercentage(allocation.getPercentage());
 		newAllocation.setQuantity(allocation.getQuantity());
 		newAllocation.setType(allocation.getType());
-		
+		newAllocation.setCreatedBy(CreatedBy.REBAL.name());
+		newAllocation.setIsActive("Y");
 		return newAllocation;
 	}
 

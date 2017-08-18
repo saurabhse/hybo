@@ -44,8 +44,9 @@ import com.hack17.hybo.domain.RiskTolerance;
 import com.hack17.hybo.repository.FundRepository;
 import com.hack17.hybo.repository.PortfolioRepository;
 import com.hackovation.hybo.AllocationType;
+import com.hackovation.hybo.CreatedBy;
 import com.hackovation.hybo.ReadFile;
-import com.hackovation.hybo.Util.EtfIndexMap;
+import com.hackovation.hybo.Util.HyboUtil;
 import com.hackovation.hybo.bean.ProfileRequest;
 import com.hackovation.hybo.services.PortfolioService;
 
@@ -61,6 +62,7 @@ public class PortfolioServiceImpl implements PortfolioService{
 
 	Map<String,String> indexToEtfMap;
 	Map<String,String> EtfToIndexMap;
+	Map<String,AllocationType> allocationTypeMap;
 	String l = "D:\\MATERIAL\\Hackathon\\Hackovation 2.0\\selected\\hybo\\Workspace\\hybo\\target\\classes\\";
 //	final static Logger logger = Logger.getLogger(PortfolioServiceImpl.class);
 	
@@ -68,8 +70,11 @@ public class PortfolioServiceImpl implements PortfolioService{
 	public Map<String,Portfolio> buildPortfolio(InvestorProfile profile,int clientId,boolean dummy,Date date,int investment) {
 		System.out.println("######## Building Portfolio Started "+clientId);
 	//	logger.info("Aman");
-		EtfToIndexMap = EtfIndexMap.getEtfToIndexMapping();
-		indexToEtfMap = EtfIndexMap.getIndexToEtfMapping();
+		EtfToIndexMap = HyboUtil.getEtfToIndexMapping();
+		indexToEtfMap = HyboUtil.getIndexToEtfMapping();
+		allocationTypeMap = HyboUtil.getAllocationTypeMap();
+		
+		
 		// Step 1. Calculate Covariance Matrix
 		System.out.println("######### Fetching Covariance Matrix "+clientId);
 		BasicMatrix covarianceMatrix = getCovarianceMatrix(date);
@@ -220,31 +225,28 @@ public class PortfolioServiceImpl implements PortfolioService{
 			Allocation allocation = new Allocation();
 			String etf = indexToEtfMap.get(assetClass);
 			Fund fund  = fundRepository.findFund(etf);
-//	 		GoogleSymbol gs = new GoogleSymbol(indexToEtfMap.get(assetClass));
-	// 		List<Data> dataList = gs.getHistoricalPrices();
 	 		Double cost = investment*assetClassWiseWeight.get(assetClass);
-	 //		if(dataList != null && dataList.size()>0){
-//				double perIndexCost = getIndexPriceForDate(dataList, date);
-		 		Calendar cal = Calendar.getInstance();
-		 		cal.setTime(date);
-		 		cal = trimTime(cal);
-				double perIndexCost = portfolioRepository.getIndexPriceForGivenDate(indexToEtfMap.get(assetClass), cal.getTime());
-	 			NumberFormat nf = NumberFormat.getInstance();
-	 			System.out.println("Asset Class: "+assetClass+" Weight: "+assetClassWiseWeight.get(assetClass)+" Cost: "+cost +" PerIndexCost: "+perIndexCost);
-	 			allocation.setQuantity(Double.valueOf((cost/perIndexCost)).intValue());
-	 			allocation.setCostPrice(perIndexCost);
-	 			allocation.setInvestment(investment);
-	 			allocation.setPercentage(assetClassWiseWeight.get(assetClass)*100);
-	 			allocation.setType(AllocationType.EQ.name());
-	 			allocation.setTransactionDate(date);
-	 			allocation.setIsActive("Y");
-	 			fund.setTicker(indexToEtfMap.get(assetClass));
-	 			allocation.setFund(fund);
-	 			allocationList.add(allocation);
-	 	//	}
+	 		Calendar cal = Calendar.getInstance();
+	 		cal.setTime(date);
+	 		cal = trimTime(cal);
+			double perIndexCost = portfolioRepository.getIndexPriceForGivenDate(indexToEtfMap.get(assetClass), cal.getTime());
+ 			NumberFormat nf = NumberFormat.getInstance();
+ 			int quantity = Double.valueOf((cost/perIndexCost)).intValue();
+ 			System.out.println("Asset Class: "+assetClass+" Weight: "+assetClassWiseWeight.get(assetClass)+" Cost: "+cost +" PerIndexCost: "+perIndexCost+" Quantity:"+quantity);
+ 			if(quantity==0)continue;
+ 			allocation.setQuantity(Double.valueOf((cost/perIndexCost)).intValue());
+ 			allocation.setCostPrice(perIndexCost);
+ 			allocation.setInvestment(investment);
+ 			allocation.setPercentage(assetClassWiseWeight.get(assetClass)*100);
+ 			allocation.setType(allocationTypeMap.get(etf).name());
+ 			allocation.setTransactionDate(date);
+ 			allocation.setIsActive("Y");
+ 			fund.setTicker(etf);
+ 			allocation.setFund(fund);
+ 			allocationList.add(allocation);
+ 			allocation.setCreatedBy(CreatedBy.PORT.name());
 		}
 		portfolio.setAllocations(allocationList);
-		//System.out.println(portfolioRepository.getPortfolio(1));
 		
 		portfolio.setInvestorProfile(profile);
 		portfolioRepository.persist(portfolio);
