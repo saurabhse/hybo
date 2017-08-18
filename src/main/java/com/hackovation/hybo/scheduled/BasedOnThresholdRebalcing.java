@@ -12,11 +12,13 @@ import java.util.Map.Entry;
 import java.util.stream.Collectors;
 import java.util.Set;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.hack17.hybo.domain.Allocation;
+import com.hack17.hybo.domain.CurrentDate;
 import com.hack17.hybo.domain.InvestorProfile;
 import com.hack17.hybo.domain.MarketStatus;
 import com.hack17.hybo.domain.Portfolio;
@@ -56,12 +58,17 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 	}
 	
 	
+	@Scheduled(cron="0 0/2 * * * *")
+	@Transactional
+	public void cron(){
+		System.out.println("Cron Running -> "+Calendar.getInstance().getTime());
+		CurrentDate existingDate = (CurrentDate)portfolioRepository.getEntity(1, CurrentDate.class);
+		rebalance(existingDate.getDate());
+	}
 	@Override
-//	@Scheduled(cron="0 0/1 * 1/1 * *")
 	@Transactional
 	public void rebalance(Date date) {
-		System.out.println("Cron Running");
-		System.out.println("Rebalancing Started!!!");
+		System.out.println("Rebalancing Started ... "+date);
 		EtfToIndexMap = HyboUtil.getEtfToIndexMapping();
 		indexToEtfMap = HyboUtil.getIndexToEtfMapping();
 
