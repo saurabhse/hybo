@@ -1,6 +1,7 @@
 package com.hackovation.hybo.Util;
 
 import java.util.Arrays;
+import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -48,5 +49,19 @@ public class HyboUtil {
 		allocationTypeMap.put("SHV",AllocationType.BOND);
 		allocationTypeMap.put("LQD",AllocationType.BOND);
 		return allocationTypeMap;
+	}
+	public static Calendar trimTime(Calendar cal){
+		cal.set(Calendar.HOUR_OF_DAY,0);
+		cal.set(Calendar.MINUTE,0);
+		cal.set(Calendar.SECOND,0);
+		cal.set(Calendar.MILLISECOND,0);
+	//	cal.set(Calendar.ZONE_OFFSET,0);
+		return cal;
+	}
+	
+	public static boolean getBoolean(String str){
+		str = str.toUpperCase();
+		if(str.equals("Y")) return true;
+		else return false;
 	}
 }

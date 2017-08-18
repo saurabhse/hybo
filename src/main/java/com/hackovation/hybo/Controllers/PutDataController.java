@@ -4,8 +4,10 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.text.DecimalFormat;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -17,18 +19,21 @@ import javax.transaction.Transactional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.util.StopWatch;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.hack17.hybo.domain.CurrentDate;
 import com.hack17.hybo.domain.Fund;
 import com.hack17.hybo.domain.IndexPrice;
 import com.hack17.hybo.domain.MarketStatus;
 import com.hack17.hybo.domain.MarketWeight;
 import com.hack17.hybo.domain.Portfolio;
 import com.hack17.hybo.repository.PortfolioRepository;
+import com.hackovation.hybo.Util.HyboUtil;
 
 @RestController
 @RequestMapping(value="/process")
@@ -37,6 +42,7 @@ public class PutDataController {
 
 	@Autowired
 	PortfolioRepository portfolioRepository;
+	SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd");
 	
 	@RequestMapping(method=RequestMethod.GET,value="/index")
 	public void putIndexData() {
@@ -65,7 +71,42 @@ public class PutDataController {
 		stopWatch.stop();
 		System.out.println(stopWatch.shortSummary());
 	}
-	
+	@RequestMapping(method=RequestMethod.GET,value="/updateDate")
+	public void putSystemDate(@RequestParam(name="date") String dateStr) throws ParseException {
+		System.out.println("Started adding date");
+		StopWatch stopWatch = new StopWatch("Started adding date : "+dateStr);
+		stopWatch.start();
+		CurrentDate date = new CurrentDate();
+		date.setId(1);
+		CurrentDate existingDate = (CurrentDate)portfolioRepository.getEntity(1, CurrentDate.class);
+		if(existingDate!=null){
+			date=existingDate;
+		}
+		Calendar cal = Calendar.getInstance();
+		if(!StringUtils.isEmpty(dateStr))
+		{
+			cal.setTime(sdf.parse(dateStr));
+		}
+		
+		cal = HyboUtil.trimTime(cal);
+		date.setDate(cal.getTime());
+		portfolioRepository.persist(date);
+		stopWatch.stop();
+		System.out.println(stopWatch.shortSummary());
+	}
+	@RequestMapping(method=RequestMethod.GET,value="/updateMarketStatus")
+	public void updateMarketStatus(@RequestParam(name="fluc") String fluctuating,@RequestParam(name="down")String down,@RequestParam(name="up")String up) throws ParseException {
+		System.out.println("Updating Market Status");
+		StopWatch stopWatch = new StopWatch("Updating Market Status");
+		stopWatch.start();
+		MarketStatus marketStatus = (MarketStatus)portfolioRepository.getEntity(1, MarketStatus.class);
+		marketStatus.setFluctuating(HyboUtil.getBoolean(fluctuating));
+		marketStatus.setGoingDown(HyboUtil.getBoolean(down));
+		marketStatus.setGoingUp(HyboUtil.getBoolean(up));
+		portfolioRepository.persist(marketStatus);
+		stopWatch.stop();
+		System.out.println(stopWatch.shortSummary());
+	}	
 	public void processFiles(){
 //		processFileAndPushInDatabase("CRSP_US_Large_Cap_Historical_Rates.csv","CRSPTM1");
 //		processFileAndPushInDatabase("CRSP_US_Mid_Cap_Historical_Rates.csv","CRSPLC1");

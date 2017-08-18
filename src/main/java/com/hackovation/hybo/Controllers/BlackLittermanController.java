@@ -24,6 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hack17.hybo.domain.Allocation;
+import com.hack17.hybo.domain.CurrentDate;
 import com.hack17.hybo.domain.InvestorProfile;
 import com.hack17.hybo.domain.Portfolio;
 import com.hack17.hybo.repository.PortfolioRepository;
@@ -51,7 +52,7 @@ public class BlackLittermanController {
 	@RequestMapping(value="/createProfile", method=RequestMethod.POST,produces = "application/json",consumes =  MediaType.APPLICATION_JSON_VALUE)
 	public @ResponseBody String createProfileAndCreatePortfolio(HttpEntity<String> entity){
 		String str = "";
-		StopWatch stopWatch = new StopWatch("Started Building Profile");
+		StopWatch stopWatch = new StopWatch("Started Building Profile!!!");
 		stopWatch.start();
 		try {
 			String json = entity.getBody();
@@ -62,6 +63,9 @@ public class BlackLittermanController {
 			Date date = new Date();
 			if(profileRequest.getDate() != null && !profileRequest.getDate().isEmpty()){
 				date = sdf.parse(profileRequest.getDate());
+			}else{
+				CurrentDate existingDate = (CurrentDate)portfolioRepository.getEntity(1, CurrentDate.class);
+				date = existingDate.getDate();
 			}
 			Map<String,Portfolio> dataMap = createPortfolio(investorProfile, profileRequest.getAmount(),date);
 			
@@ -94,6 +98,7 @@ public class BlackLittermanController {
 	public Map<String,Portfolio> createPortfolio(InvestorProfile profile,int investment,Date date) throws Exception{
 		Random random  = new Random();
 		int clientId = random.nextInt(10000000);
+		System.out.println("Started creating portfolio for client: "+clientId+" For Date: "+date );
 		return portfolioService.buildPortfolio(profile,clientId,false,date,investment);
 	}
 	
@@ -124,6 +129,35 @@ public class BlackLittermanController {
 		}
 		return str;
 	}
+	
+	// Pending
+	@RequestMapping(value="/getRebalanceCid", method=RequestMethod.GET,produces = "application/json")
+	public @ResponseBody String getRebalancingListForGivenUser(@RequestParam(name="clientId") String clientId){
+		String str = "No Data To Display";
+		try{
+			List<Portfolio>	portfolioList = portfolioRepository.getPortfolio(Integer.valueOf(clientId));
+			Portfolio portfolio = portfolioList.get(0);
+			
+			List<ProfileResponse> responseList = new ArrayList<>();
+			List<Allocation> allocationList = portfolio.getAllocations();
+			for(Allocation allocation:allocationList){
+				if(allocation.getCostPrice()==0d)continue;
+				ProfileResponse response = new ProfileResponse();
+				response.setClientId(Integer.valueOf(clientId));
+				response.setLabel(allocation.getFund().getTicker());
+				response.setValue(String.valueOf(allocation.getCostPrice()*allocation.getQuantity()));
+				responseList.add(response);
+			}
+			ObjectMapper responseMapper = new ObjectMapper();
+			str = responseMapper.writeValueAsString(responseList);
+
+			
+			
+		}catch(Exception e){
+			e.printStackTrace();
+		}
+		return str;
+	}	
 /*	@RequestMapping(method=RequestMethod.GET,value="/getPortfolio")
 	public @ResponseBody Map<String,Portfolio> getPortfolio(@RequestParam(name="clientId") String clientId,@RequestParam(name="date") String dateString) throws Exception{
 		ClassLoader cl = getClass().getClassLoader();
@@ -142,7 +176,11 @@ public class BlackLittermanController {
 		Date date = new Date();
 		if(dateStr!=null){
 			date = sdf.parse(dateStr);
+		}else{
+			CurrentDate existingDate = (CurrentDate)portfolioRepository.getEntity(1, CurrentDate.class);
+			date = existingDate.getDate();			
 		}
+		System.out.println("Started rebalancing For Date: "+date );
 		rebalance.rebalance(date);
 	}
 	
