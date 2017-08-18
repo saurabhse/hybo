@@ -89,7 +89,7 @@ public class PortfolioServiceImpl implements PortfolioService{
 		MarketEquilibrium marketEquilibrium = new MarketEquilibrium(tickers, covarianceMatrix, lambda);
 		BlackLittermanModel bl  = new BlackLittermanModel(marketEquilibrium, marketWeightMatrix);
 		System.out.println("\n");
-		System.out.println("###### Adding User View with balenced Confidence");
+		System.out.println("###### Adding User View with balanced Confidence");
 		List<BigDecimal> weights = new ArrayList<>();
 		weights.add(new BigDecimal(0));
 		weights.add(new BigDecimal(0));
@@ -213,6 +213,7 @@ public class PortfolioServiceImpl implements PortfolioService{
 	public Map<String,Portfolio> buildPortfolio(InvestorProfile profile,int investment,LinkedHashMap<String, Double> assetClassWiseWeight,int clientId,boolean dummy,Date date){
 		Portfolio portfolio = new Portfolio();
 		portfolio.setClientId(clientId);
+		portfolio.setTransactionDate(date);
 		List<Allocation> allocationList = new ArrayList<>();
 		Map<String, Portfolio> portfolioMap = new HashMap<>();
 		for(String assetClass:indexToEtfMap.keySet()){

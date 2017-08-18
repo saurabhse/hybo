@@ -1,6 +1,7 @@
 package com.hackovation.hybo.Controllers;
 
 import java.io.IOException;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -45,12 +46,13 @@ public class BlackLittermanController {
 	@Autowired
 	Rebalance rebalance;
 	
+	SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd");
+
 	@RequestMapping(value="/createProfile", method=RequestMethod.POST,produces = "application/json",consumes =  MediaType.APPLICATION_JSON_VALUE)
 	public @ResponseBody String createProfileAndCreatePortfolio(HttpEntity<String> entity){
 		String str = "";
 		StopWatch stopWatch = new StopWatch("Started Building Profile");
 		stopWatch.start();
-		SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd");
 		try {
 			String json = entity.getBody();
 			ObjectMapper mapper = new ObjectMapper();
@@ -136,13 +138,21 @@ public class BlackLittermanController {
 	}
 */
 	@RequestMapping(method=RequestMethod.GET,value="/rebalance")
-	public void rebalancePortfolio(){
-		 rebalance.rebalance();
+	public void rebalancePortfolio(@RequestParam(name="date",required=false)String dateStr) throws ParseException{
+		Date date = new Date();
+		if(dateStr!=null){
+			date = sdf.parse(dateStr);
+		}
+		rebalance.rebalance(date);
 	}
 	
 	@RequestMapping(method=RequestMethod.GET,value="/deleteAll")
 	public void deleteAllPortfolio(){
+		StopWatch stopWatch = new StopWatch("All Portoflio Deletion!!");
+		stopWatch.start();
 		portfolioService.deleteAllPortfolio();
+		stopWatch.stop();
+		System.out.println(stopWatch.shortSummary());
 	}
 	
 	
