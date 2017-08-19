@@ -4,12 +4,17 @@ import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Random;
 import java.util.Set;
+import java.util.TreeSet;
 
 import javax.transaction.Transactional;
 
@@ -32,6 +37,7 @@ import com.hack17.hybo.domain.InvestorProfile;
 import com.hack17.hybo.domain.Portfolio;
 import com.hack17.hybo.domain.UserClientMapping;
 import com.hack17.hybo.repository.PortfolioRepository;
+import com.hackovation.hybo.CreatedBy;
 import com.hackovation.hybo.Util.HyboUtil;
 import com.hackovation.hybo.bean.ProfileRequest;
 import com.hackovation.hybo.bean.ProfileResponse;
@@ -158,12 +164,50 @@ public class BlackLittermanController {
 	@RequestMapping(value="/getRebalanceCid", method=RequestMethod.GET,produces = "application/json")
 	public @ResponseBody String getRebalancingListForGivenUser(@RequestParam(name="userId") String userId){
 		String str = "No Data To Display";
+		StringBuffer sb = new StringBuffer("[");
+		SimpleDateFormat rebFor = new SimpleDateFormat("yyyy-MM");
 		try{
 			int clientId = getClientId(userId);
 			List<Portfolio>	portfolioList = portfolioRepository.getPortfolio(Integer.valueOf(clientId));
 			Portfolio portfolio = portfolioList.get(0);
 			
-			List<ProfileResponse> responseList = new ArrayList<>();
+			MyComparator comparator = new MyComparator();
+			
+			//Preparing data ticker wise and sorted by date
+			Map<String,Set<Allocation>> filteredMap = new HashMap<>();
+			for(Allocation allocation:portfolio.getAllocations()){
+				if(allocation.getCreatedBy().equals(CreatedBy.TLH.name()))continue;
+				String key = allocation.getFund().getTicker();
+				Set<Allocation> dataList = filteredMap.get(key);
+				if(dataList==null) dataList = new TreeSet(comparator);
+				dataList.add(allocation);
+				filteredMap.put(key,dataList);
+			}
+			
+			Set<String> keySet = filteredMap.keySet();
+			for(String etf:keySet){
+				sb.append("{'ETF':'").append(etf).append("'");
+				Set<Allocation> allocationList =filteredMap.get(etf);
+				int i=0;
+				for(Allocation allocation:allocationList){
+					if(i++==0){
+						sb.append(",'Price':'").append(String.valueOf(allocation.getCostPrice())).append("'");
+						sb.append(",'Value':'").append(String.valueOf(allocation.getInvestment())).append("'");
+						sb.append(",'Percentage':'").append(String.valueOf(allocation.getPercentage())).append("'");
+					}else{
+						String dateAppender = rebFor.format(allocation.getTransactionDate());
+						sb.append(",'Price On ").append(dateAppender).append("':'").append(String.valueOf(allocation.getCostPrice())).append("'");
+						sb.append(",'Value On ").append(dateAppender).append("':'").append(String.valueOf(allocation.getCostPrice()*allocation.getRebalanceDayQuantity())).append("'");
+						sb.append(",'Percentage On ").append(dateAppender).append("':'").append(String.valueOf(allocation.getRebalanceDayPerc())).append("'");
+						sb.append(",'Update Value On ").append(dateAppender).append("':'").append(String.valueOf(allocation.getCostPrice()*allocation.getQuantity())).append("'");
+						sb.append(",'Updated On ").append(dateAppender).append("':'").append(String.valueOf(allocation.getPercentage())).append("'");
+					}
+				}
+				sb.append("},");
+			}
+			sb.append("]");
+			
+/*			List<ProfileResponse> responseList = new ArrayList<>();
 			List<Allocation> allocationList = portfolio.getAllocations();
 			for(Allocation allocation:allocationList){
 				if(allocation.getCostPrice()==0d || allocation.getIsActive().equals("N"))continue;
@@ -176,12 +220,12 @@ public class BlackLittermanController {
 			ObjectMapper responseMapper = new ObjectMapper();
 			str = responseMapper.writeValueAsString(responseList);
 
-			
+*/			
 			
 		}catch(Exception e){
 			e.printStackTrace();
 		}
-		return str;
+		return sb.toString();
 	}	
 	@Transactional
 	private int getClientId(String userId){
@@ -235,7 +279,15 @@ public class BlackLittermanController {
 		System.out.println(stopWatch.shortSummary());
 	}
 	
+class MyComparator implements Comparator<Allocation>{
 
+	@Override
+	public int compare(Allocation o1, Allocation o2) {
+		
+		return o1.getTransactionDate().compareTo(o2.getTransactionDate());
+	}
+	
+}
 
 /*	BasicMatrix getCovarianceMatrixOld(){
  		GoogleSymbol gs = new GoogleSymbol("AOR");
