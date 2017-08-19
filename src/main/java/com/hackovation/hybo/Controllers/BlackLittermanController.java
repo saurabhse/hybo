@@ -1,6 +1,8 @@
 package com.hackovation.hybo.Controllers;
 
 import java.io.IOException;
+import java.text.DecimalFormat;
+import java.text.NumberFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -164,6 +166,8 @@ public class BlackLittermanController {
 	@RequestMapping(value="/getRebalanceCid", method=RequestMethod.GET,produces = "application/json")
 	public @ResponseBody String getRebalancingListForGivenUser(@RequestParam(name="userId") String userId){
 		String str = "No Data To Display";
+		NumberFormat numFormat = new DecimalFormat("#########.##");
+		NumberFormat percFormat = new DecimalFormat("##.##%");
 		StringBuffer sb = new StringBuffer("[");
 		SimpleDateFormat rebFor = new SimpleDateFormat("yyyy-MM");
 		try{
@@ -186,25 +190,27 @@ public class BlackLittermanController {
 			
 			Set<String> keySet = filteredMap.keySet();
 			for(String etf:keySet){
-				sb.append("{'ETF':'").append(etf).append("'");
+				sb.append("{\"ETF\":\"").append(etf).append("\"");
 				Set<Allocation> allocationList =filteredMap.get(etf);
 				int i=0;
 				for(Allocation allocation:allocationList){
 					if(i++==0){
-						sb.append(",'Price':'").append(String.valueOf(allocation.getCostPrice())).append("'");
-						sb.append(",'Value':'").append(String.valueOf(allocation.getInvestment())).append("'");
-						sb.append(",'Percentage':'").append(String.valueOf(allocation.getPercentage())).append("'");
+						sb.append(",\"Price\":\"").append(numFormat.format(allocation.getCostPrice())).append("\"");
+						sb.append(",\"Value\":\"").append(numFormat.format(allocation.getInvestment())).append("\"");
+						sb.append(",\"Percentage\":\"").append(percFormat.format(allocation.getPercentage()/100)).append("\"");
 					}else{
 						String dateAppender = rebFor.format(allocation.getTransactionDate());
-						sb.append(",'Price On ").append(dateAppender).append("':'").append(String.valueOf(allocation.getCostPrice())).append("'");
-						sb.append(",'Value On ").append(dateAppender).append("':'").append(String.valueOf(allocation.getCostPrice()*allocation.getRebalanceDayQuantity())).append("'");
-						sb.append(",'Percentage On ").append(dateAppender).append("':'").append(String.valueOf(allocation.getRebalanceDayPerc())).append("'");
-						sb.append(",'Update Value On ").append(dateAppender).append("':'").append(String.valueOf(allocation.getCostPrice()*allocation.getQuantity())).append("'");
-						sb.append(",'Updated On ").append(dateAppender).append("':'").append(String.valueOf(allocation.getPercentage())).append("'");
+						sb.append(",\"Price On ").append(dateAppender).append("\":\"").append(numFormat.format(allocation.getCostPrice())).append("\"");
+						sb.append(",\"Value On ").append(dateAppender).append("\":\"").append(numFormat.format(allocation.getCostPrice()*allocation.getRebalanceDayQuantity())).append("\"");
+						sb.append(",\"Percentage On ").append(dateAppender).append("\":\"").append(numFormat.format(allocation.getRebalanceDayPerc())).append("\"");
+						sb.append(",\"Update Value On ").append(dateAppender).append("\":\"").append(numFormat.format(allocation.getCostPrice()*allocation.getQuantity())).append("\"");
+						sb.append(",\"Updated On ").append(dateAppender).append("\":\"").append(percFormat.format(allocation.getPercentage()/100)).append("\"");
 					}
 				}
 				sb.append("},");
 			}
+			str = sb.substring(0, sb.lastIndexOf(","));
+			str +="]";
 			sb.append("]");
 			
 /*			List<ProfileResponse> responseList = new ArrayList<>();
@@ -225,7 +231,7 @@ public class BlackLittermanController {
 		}catch(Exception e){
 			e.printStackTrace();
 		}
-		return sb.toString();
+		return str;
 	}	
 	@Transactional
 	private int getClientId(String userId){
