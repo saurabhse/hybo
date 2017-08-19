@@ -270,6 +270,8 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 				newInvestment+=newAllocation.getCostPrice();
 				newAllocationList.add(newAllocation);
 				log(allocation, newAllocation, currentDate);
+				newAllocation.setRebalanceDayQuantity(allocation.getQuantity());
+				newAllocation.setRebalanceDayPrice(cost);
 			}
 			else if (adjustment > 0 ){
 				double newPer =existingPerc+Math.abs(adjustment);
@@ -283,11 +285,15 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 				allocation.setIsActive("N");
 				newInvestment+=newAllocation.getCostPrice();
 				newAllocationList.add(newAllocation);
+				newAllocation.setRebalanceDayQuantity(allocation.getQuantity());
+				newAllocation.setRebalanceDayPrice(cost);
 				log(allocation, newAllocation, currentDate);
 			}
 			
 		}
-		
+		updatePercCurrent(newAllocationList);
+		updatePercLatest(newAllocationList);
+
 		for(Allocation allocation:newAllocationList){
 			allocation.setInvestment(newInvestment);
 		}
@@ -341,23 +347,48 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 			newAllocation.setPercentage(perc);
 			newAllocation.setQuantity(number);
 			newAllocation.setIsActive("Y");
+			newAllocation.setRebalanceDayQuantity(allocation.getQuantity());
+			newAllocation.setRebalanceDayPrice(cost);
 			newAllocationList.add(newAllocation);
 			log(allocation, newAllocation, currentDate);
 		}
+		updatePercCurrent(newAllocationList);
+		updatePercLatest(newAllocationList);
 		return newAllocationList;
 	}
 	
 	private void updatePercCurrent(List<Allocation> allocationList){
 		double portfolioValue = 0.0;
 		for(Allocation allocation:allocationList){
-			portfolioValue += allocation.getCostPrice()*allocation.getQuantity();
+			portfolioValue += allocation.getRebalanceDayPrice()*allocation.getRebalanceDayQuantity();
 		}
 		for(Allocation allocation:allocationList){
-			allocation.setPercentage(portfolioValue);
+			double value = allocation.getRebalanceDayPrice()*allocation.getRebalanceDayQuantity();
+			try{
+				allocation.setRebalanceDayPerc(value*100/portfolioValue);
+			}
+			catch(Exception e){
+				e.printStackTrace();
+				allocation.setRebalanceDayPerc(0);
+			}
 		}
 		
 	}
 	private void updatePercLatest(List<Allocation> allocationList){
+		double portfolioValue = 0.0;
+		for(Allocation allocation:allocationList){
+			portfolioValue += allocation.getCostPrice()*allocation.getQuantity();
+		}
+		for(Allocation allocation:allocationList){
+			double value = allocation.getCostPrice()*allocation.getQuantity();
+			try{
+				allocation.setPercentage(value*100/portfolioValue);
+			}
+			catch(Exception e){
+				e.printStackTrace();
+				allocation.setPercentage(0);
+			}
+		}
 		
 	}
 	

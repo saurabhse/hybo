@@ -289,6 +289,8 @@ public class PortfolioServiceImpl implements PortfolioService{
 		for(Portfolio port:listOfPortfolios)portfolioRepository.delete(port);
 		List<InvestorProfile> listInvestorProfiles =  portfolioRepository.getAllInvestorProfile();
 		for(InvestorProfile obj:listInvestorProfiles)portfolioRepository.delete(obj);
+		List<UserClientMapping> listUsers =  portfolioRepository.getAllUsers();
+		for(UserClientMapping obj:listUsers)portfolioRepository.delete(obj);
 	}
 
 	@Override
