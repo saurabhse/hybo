@@ -12,6 +12,7 @@ public class ProfileRequest {
 	String risk;
 	int income;
 	String date;
+	String userId;
 	public int getAge() {
 		return age;
 	}
@@ -47,6 +48,12 @@ public class ProfileRequest {
 	}
 	public void setDate(String date) {
 		this.date = date;
+	}
+	public String getUserId() {
+		return userId;
+	}
+	public void setUserId(String userId) {
+		this.userId = userId;
 	}
 	
 

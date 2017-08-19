@@ -5,6 +5,7 @@ import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.hack17.hybo.domain.UserClientMapping;
 import com.hackovation.hybo.AllocationType;
 
 public class HyboUtil {

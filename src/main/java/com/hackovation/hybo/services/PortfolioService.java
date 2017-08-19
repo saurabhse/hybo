@@ -9,7 +9,7 @@ import com.hackovation.hybo.bean.ProfileRequest;
 
 public interface PortfolioService {
 
-	public Map<String,Portfolio> buildPortfolio(InvestorProfile profile , int clientId,boolean dummy,Date date,int investment);
+	public Map<String,Portfolio> buildPortfolio(InvestorProfile profile , String userId,boolean dummy,Date date,int investment);
 	public void deleteAllPortfolio();
 	public InvestorProfile createProfile(ProfileRequest profileRequest);
 }

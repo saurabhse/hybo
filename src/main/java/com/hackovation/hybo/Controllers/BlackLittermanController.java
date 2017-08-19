@@ -11,6 +11,8 @@ import java.util.Map.Entry;
 import java.util.Random;
 import java.util.Set;
 
+import javax.transaction.Transactional;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.MediaType;
@@ -22,11 +24,13 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hack17.hybo.domain.Allocation;
 import com.hack17.hybo.domain.CurrentDate;
 import com.hack17.hybo.domain.InvestorProfile;
 import com.hack17.hybo.domain.Portfolio;
+import com.hack17.hybo.domain.UserClientMapping;
 import com.hack17.hybo.repository.PortfolioRepository;
 import com.hackovation.hybo.Util.HyboUtil;
 import com.hackovation.hybo.bean.ProfileRequest;
@@ -48,6 +52,26 @@ public class BlackLittermanController {
 	Rebalance rebalance;
 	
 	SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd");
+	
+	@RequestMapping(value="/validateUser", method=RequestMethod.GET,produces="application/json")
+	public @ResponseBody String validateUser(@RequestParam(name="userId")String userId) throws JsonProcessingException{
+		String str;
+		Object object = portfolioRepository.getEntityForAny(UserClientMapping.class,userId);
+		if(object==null){
+			ProfileResponse response = new ProfileResponse();
+			response.setLabel("0");
+			ObjectMapper responseMapper = new ObjectMapper();
+			str = responseMapper.writeValueAsString(response);
+			return str;
+		}else{
+			UserClientMapping existingObject = (UserClientMapping)object;
+			ProfileResponse response = new ProfileResponse();
+			response.setLabel("1");
+			ObjectMapper responseMapper = new ObjectMapper();
+			str = responseMapper.writeValueAsString(response);
+			return str;
+		}
+	}
 
 	@RequestMapping(value="/createProfile", method=RequestMethod.POST,produces = "application/json",consumes =  MediaType.APPLICATION_JSON_VALUE)
 	public @ResponseBody String createProfileAndCreatePortfolio(HttpEntity<String> entity){
@@ -59,6 +83,7 @@ public class BlackLittermanController {
 			ObjectMapper mapper = new ObjectMapper();
 			ProfileRequest profileRequest;
 			profileRequest = mapper.readValue(json, ProfileRequest.class);
+			String userId = profileRequest.getUserId();
 			InvestorProfile investorProfile = portfolioService.createProfile(profileRequest);
 			Date date = new Date();
 			if(profileRequest.getDate() != null && !profileRequest.getDate().isEmpty()){
@@ -67,7 +92,7 @@ public class BlackLittermanController {
 				CurrentDate existingDate = (CurrentDate)portfolioRepository.getEntity(1, CurrentDate.class);
 				date = existingDate.getDate();
 			}
-			Map<String,Portfolio> dataMap = createPortfolio(investorProfile, profileRequest.getAmount(),date);
+			Map<String,Portfolio> dataMap = createPortfolio(investorProfile, profileRequest.getAmount(),date,userId);
 			
 			
 			List<ProfileResponse> responseList = new ArrayList<>();
@@ -95,24 +120,23 @@ public class BlackLittermanController {
 		return str;
 	}
 	
-	public Map<String,Portfolio> createPortfolio(InvestorProfile profile,int investment,Date date) throws Exception{
-		Random random  = new Random();
-		int clientId = random.nextInt(10000000);
-		System.out.println("Started creating portfolio for client: "+clientId+" For Date: "+date );
-		return portfolioService.buildPortfolio(profile,clientId,false,date,investment);
+	public Map<String,Portfolio> createPortfolio(InvestorProfile profile,int investment,Date date,String userId) throws Exception{
+		System.out.println("Started creating portfolio for client: "+userId+" For Date: "+date );
+		return portfolioService.buildPortfolio(profile,userId,false,date,investment);
 	}
 	
 	@RequestMapping(value="/getPortfolioCid", method=RequestMethod.GET,produces = "application/json")
-	public @ResponseBody String getPortfolioForClientIdAsPerAmount(@RequestParam(name="clientId") String clientId){
+	public @ResponseBody String getPortfolioForClientIdAsPerAmount(@RequestParam(name="userId") String userId){
 		String str = "No Data To Display";
 		try{
+			int clientId = getClientId(userId);
 			List<Portfolio>	portfolioList = portfolioRepository.getPortfolio(Integer.valueOf(clientId));
 			Portfolio portfolio = portfolioList.get(0);
 			
 			List<ProfileResponse> responseList = new ArrayList<>();
 			List<Allocation> allocationList = portfolio.getAllocations();
 			for(Allocation allocation:allocationList){
-				if(allocation.getCostPrice()==0d)continue;
+				if(allocation.getCostPrice()==0d || allocation.getIsActive().equals("N"))continue;
 				ProfileResponse response = new ProfileResponse();
 				response.setClientId(Integer.valueOf(clientId));
 				response.setLabel(allocation.getFund().getTicker());
@@ -132,9 +156,10 @@ public class BlackLittermanController {
 	
 	// Pending
 	@RequestMapping(value="/getRebalanceCid", method=RequestMethod.GET,produces = "application/json")
-	public @ResponseBody String getRebalancingListForGivenUser(@RequestParam(name="clientId") String clientId){
+	public @ResponseBody String getRebalancingListForGivenUser(@RequestParam(name="userId") String userId){
 		String str = "No Data To Display";
 		try{
+			int clientId = getClientId(userId);
 			List<Portfolio>	portfolioList = portfolioRepository.getPortfolio(Integer.valueOf(clientId));
 			Portfolio portfolio = portfolioList.get(0);
 			
@@ -158,6 +183,23 @@ public class BlackLittermanController {
 		}
 		return str;
 	}	
+	@Transactional
+	private int getClientId(String userId){
+		Object object = portfolioRepository.getEntityForAny(UserClientMapping.class,userId);
+		if(object==null){
+			Random random  = new Random();
+			int clientId = random.nextInt(10000000);
+			UserClientMapping newObject = new UserClientMapping();
+			newObject.setClientId(clientId);
+			newObject.setUserId(userId);
+			portfolioRepository.persist(newObject);
+			return clientId;
+		}else{
+			UserClientMapping existingObject = (UserClientMapping)object;
+			return existingObject.getClientId();
+		}
+	}
+
 /*	@RequestMapping(method=RequestMethod.GET,value="/getPortfolio")
 	public @ResponseBody Map<String,Portfolio> getPortfolio(@RequestParam(name="clientId") String clientId,@RequestParam(name="date") String dateString) throws Exception{
 		ClassLoader cl = getClass().getClassLoader();
@@ -189,12 +231,11 @@ public class BlackLittermanController {
 		StopWatch stopWatch = new StopWatch("All Portoflio Deletion!!");
 		stopWatch.start();
 		portfolioService.deleteAllPortfolio();
-		portfolioService.deleteAllPortfolio();
 		stopWatch.stop();
 		System.out.println(stopWatch.shortSummary());
 	}
 	
-	
+
 
 /*	BasicMatrix getCovarianceMatrixOld(){
  		GoogleSymbol gs = new GoogleSymbol("AOR");

@@ -314,7 +314,6 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 		double currentValueOfPortfolio = 0;
 		HashMap<String, Double> newPricesPerETF = new HashMap<>();
 		HashMap<String,Double> existPercMap = new HashMap<>();
-
 		for(Allocation existingAllocation:equityAllocationList){
 			int noOfETF = existingAllocation.getQuantity();
 			Map<String,String> paths = PathsAsPerAssetClass.getETFPaths();
@@ -347,6 +346,21 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 		}
 		return newAllocationList;
 	}
+	
+	private void updatePercCurrent(List<Allocation> allocationList){
+		double portfolioValue = 0.0;
+		for(Allocation allocation:allocationList){
+			portfolioValue += allocation.getCostPrice()*allocation.getQuantity();
+		}
+		for(Allocation allocation:allocationList){
+			allocation.setPercentage(portfolioValue);
+		}
+		
+	}
+	private void updatePercLatest(List<Allocation> allocationList){
+		
+	}
+	
 	private int getFloorValue(RiskTolerance riskTolerance,double totalInvestment){
 		int floorValue = 0;
 		int perc = 0;
@@ -401,9 +415,9 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 		int oldQuantity = existingAllocation.getQuantity();
 		int newQuantity = newAllocation.getQuantity();
 		if(oldQuantity>newQuantity){//SELL
-			dbLoggerService.logTransaction(existingAllocation, newAllocation.getCostPrice(), sellDate, oldQuantity-newQuantity);
+			//dbLoggerService.logTransaction(existingAllocation, newAllocation.getCostPrice(), sellDate, oldQuantity-newQuantity);
 		}else if(newQuantity>oldQuantity){//BUY
-			dbLoggerService.logTransaction(existingAllocation, newAllocation.getCostPrice(), sellDate, newQuantity-oldQuantity);
+			//dbLoggerService.logTransaction(existingAllocation, newAllocation.getCostPrice(), sellDate, newQuantity-oldQuantity);
 		}
 	}
 	

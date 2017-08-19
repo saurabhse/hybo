@@ -10,7 +10,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-
+import java.util.Random;
 
 import org.algo.finance.FinanceUtils;
 import org.algo.finance.data.GoogleSymbol.Data;
@@ -32,6 +32,7 @@ import com.hack17.hybo.domain.InvestorProfile;
 import com.hack17.hybo.domain.MarketWeight;
 import com.hack17.hybo.domain.Portfolio;
 import com.hack17.hybo.domain.RiskTolerance;
+import com.hack17.hybo.domain.UserClientMapping;
 import com.hack17.hybo.repository.FundRepository;
 import com.hack17.hybo.repository.PortfolioRepository;
 import com.hackovation.hybo.AllocationType;
@@ -56,9 +57,27 @@ public class PortfolioServiceImpl implements PortfolioService{
 	String l = "D:\\MATERIAL\\Hackathon\\Hackovation 2.0\\selected\\hybo\\Workspace\\hybo\\target\\classes\\";
 //	final static Logger logger = Logger.getLogger(PortfolioServiceImpl.class);
 	
+	@Transactional
+	private int getClientId(String userId){
+		Object object = portfolioRepository.getEntityForAny(UserClientMapping.class,userId);
+		if(object==null){
+			Random random  = new Random();
+			int clientId = random.nextInt(10000000);
+			UserClientMapping newObject = new UserClientMapping();
+			newObject.setClientId(clientId);
+			newObject.setUserId(userId);
+			portfolioRepository.persist(newObject);
+			return clientId;
+		}else{
+			UserClientMapping existingObject = (UserClientMapping)object;
+			return existingObject.getClientId();
+		}
+	}
 	@Override
-	public Map<String,Portfolio> buildPortfolio(InvestorProfile profile,int clientId,boolean dummy,Date date,int investment) {
-		System.out.println("######## Building Portfolio Started "+clientId);
+	public Map<String,Portfolio> buildPortfolio(InvestorProfile profile,String userId,boolean dummy,Date date,int investment) {
+		System.out.println("######## Building Portfolio Started "+userId);
+		
+		int clientId = getClientId(userId);
 	//	logger.info("Aman");
 		EtfToIndexMap = HyboUtil.getEtfToIndexMapping();
 		indexToEtfMap = HyboUtil.getIndexToEtfMapping();
@@ -66,10 +85,10 @@ public class PortfolioServiceImpl implements PortfolioService{
 		
 		
 		// Step 1. Calculate Covariance Matrix
-		System.out.println("######### Fetching Covariance Matrix "+clientId);
+		System.out.println("######### Fetching Covariance Matrix "+userId);
 		BasicMatrix covarianceMatrix = getCovarianceMatrix(date);
 		System.out.println(covarianceMatrix);
-		System.out.println("######### Done Fetching Covariance Matrix "+clientId);
+		System.out.println("######### Done Fetching Covariance Matrix "+userId);
 		System.out.println("\n\n\n\n\n");
 
 		// Step 2. Calculate Lambda (Risk Aversion Factor)
@@ -98,7 +117,7 @@ public class PortfolioServiceImpl implements PortfolioService{
 /*		System.out.println("--------------Asset Return Matrix---------------------");
 		System.out.println(bl.getAssetReturns());
 */	
-		System.out.println("######Asset Weights Calculation Started "+clientId);
+		System.out.println("######Asset Weights Calculation Started "+userId);
 		BasicMatrix finalAssetWeights = bl.getAssetWeights();
 		System.out.println("###### Asset Weights "+finalAssetWeights);
 		System.out.println("\n");
@@ -108,7 +127,7 @@ public class PortfolioServiceImpl implements PortfolioService{
 			assetClassWiseWeight.put(assetClass, finalAssetWeights.doubleValue(i++));
 		}
 		Map<String,Portfolio> map = buildPortfolio(profile,investment,assetClassWiseWeight,clientId,dummy,date);
-		System.out.println(" ###### Building Portfolio Done "+clientId);
+		System.out.println(" ###### Building Portfolio Done "+userId);
 		System.out.println(" Done !!!! ");
 		return map;		
 	}
