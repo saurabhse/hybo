@@ -193,19 +193,35 @@ public class BlackLittermanController {
 				sb.append("{\"ETF\":\"").append(etf).append("\"");
 				Set<Allocation> allocationList =filteredMap.get(etf);
 				int i=0;
+				boolean isRebalanceingDone = false;
+				if(allocationList.size()>1)
+					isRebalanceingDone=true;
 				for(Allocation allocation:allocationList){
-					if(i++==0){
-						sb.append(",\"Price\":\"").append(numFormat.format(allocation.getCostPrice())).append("\"");
-						sb.append(",\"Value\":\"").append(numFormat.format(allocation.getInvestment())).append("\"");
-						sb.append(",\"Percentage\":\"").append(percFormat.format(allocation.getPercentage()/100)).append("\"");
-					}else{
-						String dateAppender = rebFor.format(allocation.getTransactionDate());
+					String dateAppender = rebFor.format(allocation.getTransactionDate());
+					sb.append(",\"Price\":\"").append(numFormat.format(allocation.getRebalanceDayPrice())).append("\"");
+					if(isRebalanceingDone && i!=0)
 						sb.append(",\"Price On ").append(dateAppender).append("\":\"").append(numFormat.format(allocation.getCostPrice())).append("\"");
+					i++;
+				}
+				i=0;
+				for(Allocation allocation:allocationList){
+					String dateAppender = rebFor.format(allocation.getTransactionDate());
+					sb.append(",\"Value\":\"").append(numFormat.format(allocation.getRebalanceDayPrice()*allocation.getRebalanceDayQuantity())).append("\"");
+					if(isRebalanceingDone && i!=0){
 						sb.append(",\"Value On ").append(dateAppender).append("\":\"").append(numFormat.format(allocation.getCostPrice()*allocation.getRebalanceDayQuantity())).append("\"");
-						sb.append(",\"Percentage On ").append(dateAppender).append("\":\"").append(numFormat.format(allocation.getRebalanceDayPerc())).append("\"");
-						sb.append(",\"Update Value On ").append(dateAppender).append("\":\"").append(numFormat.format(allocation.getCostPrice()*allocation.getQuantity())).append("\"");
-						sb.append(",\"Updated On ").append(dateAppender).append("\":\"").append(percFormat.format(allocation.getPercentage()/100)).append("\"");
+						sb.append(",\"Rebalanced Value").append(dateAppender).append("\":\"").append(numFormat.format(allocation.getCostPrice()*allocation.getQuantity())).append("\"");
 					}
+					i++;
+				}
+				i=0;
+				for(Allocation allocation:allocationList){
+					String dateAppender = rebFor.format(allocation.getTransactionDate());
+					sb.append(",\"Allocation %\":\"").append(percFormat.format(allocation.getRebalanceDayPerc()/100)).append("\"");
+					if(isRebalanceingDone && i!=0){
+						sb.append(",\"Allocation % On ").append(dateAppender).append("\":\"").append(percFormat.format(allocation.getRebalanceDayPerc())).append("\"");
+						sb.append(",\"Rebalanced Allocation").append(dateAppender).append("\":\"").append(percFormat.format(allocation.getPercentage()/100)).append("\"");
+					}
+					i++;
 				}
 				sb.append("},");
 			}
