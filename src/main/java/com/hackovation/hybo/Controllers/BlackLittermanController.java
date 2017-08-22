@@ -255,12 +255,12 @@ public class BlackLittermanController {
 				sb.append("\"data\":[");
 				for(DataVO data:dataVo){
 					String dateAppender = rebFor.format(data.getTransactionDate());
-					sb.append("\"label\":\"").append(dateAppender);
+					sb.append("{\"label\":\"").append(dateAppender);
 					if(i!=0){
-						sb.append("(Rebalance)\"");
+						sb.append("(Rebalance)\"}");
 					}
 					else{
-						sb.append("\"");
+						sb.append("\"}");
 					}
 					i++;
 				}
@@ -269,12 +269,12 @@ public class BlackLittermanController {
 				
 				sb.append("\"Value\":[");
 				for(DataVO data:dataVo){
-					sb.append("\"label\":\"").append(numFormat.format(data.getValue()));
+					sb.append("{\"value\":\"").append(numFormat.format(data.getValue()));
 					if(i!=0){
-						sb.append("(Rebalance)\"");
+						sb.append("(Rebalance)\"}");
 					}
 					else{
-						sb.append("\"");
+						sb.append("\"}");
 					}
 					i++;
 				}
@@ -282,12 +282,12 @@ public class BlackLittermanController {
 				sb.append("],");
 				sb.append("\"Price\":[");
 				for(DataVO data:dataVo){
-					sb.append("\"label\":\"").append(numFormat.format(data.getPerEtfPrice()));
+					sb.append("{\"value\":\"").append(numFormat.format(data.getPerEtfPrice()));
 					if(i!=0){
-						sb.append("(Rebalance)\"");
+						sb.append("(Rebalance)\"}");
 					}
 					else{
-						sb.append("\"");
+						sb.append("\"}");
 					}
 					i++;
 				}
@@ -295,17 +295,17 @@ public class BlackLittermanController {
 				sb.append("],");
 				sb.append("\"Allocation\":[");
 				for(DataVO data:dataVo){
-					sb.append("\"label\":\"").append(percFormat.format(data.getPerc()));
+					sb.append("{\"value\":\"").append(percFormat.format(data.getPerc()));
 					if(i!=0){
-						sb.append("(Rebalance)\"");
+						sb.append("(Rebalance)\"}");
 					}
 					else{
-						sb.append("\"");
+						sb.append("\"}");
 					}
 					i++;
 				}
 				
-				sb.append("],");
+				sb.append("]},");
 				
 			}
 			str = sb.substring(0, sb.lastIndexOf(","));
