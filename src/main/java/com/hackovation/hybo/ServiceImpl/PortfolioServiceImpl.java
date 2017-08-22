@@ -249,6 +249,7 @@ public class PortfolioServiceImpl implements PortfolioService{
  			allocation.setPercentage(assetClassWiseWeight.get(assetClass)*100);
  			allocation.setType(allocationTypeMap.get(etf).name());
  			allocation.setTransactionDate(date);
+ 			allocation.setBuyDate(date);
  			allocation.setIsActive("Y");
  			fund.setTicker(etf);
  			allocation.setFund(fund);

@@ -138,10 +138,57 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 		
 		List<Allocation> newAllocationList = rebalanceEquity(portfolio,eqAllocationList,bondAllocationList,date);
 		if(newAllocationList != null && newAllocationList.size()>0)
-			rebalanceBond(portfolio, bondAllocationList,newAllocationList,date);
-		
+			newAllocationList = rebalanceBond(portfolio, bondAllocationList,newAllocationList,date);
+		persistAllocationInDatabase(portfolio,portfolioList,newAllocationList,date);
 	}
-	public void rebalanceBond(Portfolio portfolio,List<Allocation> bondAllocationList,List<Allocation>updatedAllocationList,Date date){
+	
+	public void persistAllocationInDatabase(Portfolio portfolio,List<Allocation> existingAllocationList,List<Allocation> newAllocationList,Date date){
+		
+		List<Allocation> persistList = new ArrayList<>();
+		
+		Calendar cal = Calendar.getInstance();
+ 		cal.setTime(date);
+ 		cal = trimTime(cal);
+ 		Date currentDate = cal.getTime();
+		Map<String,Allocation> existingAllocationMap = getMapPerETF(existingAllocationList);
+		Map<String,Allocation> newAllocationMap = getMapPerETF(newAllocationList);
+		Set<String> keys = newAllocationMap.keySet();
+		for(String ticker:keys){
+			Allocation newAllocation = newAllocationMap.get(ticker);
+			Allocation existingAllocation = existingAllocationMap.get(ticker);
+			int newQuantity = newAllocation.getQuantity();
+			int oldQuantity = existingAllocation.getQuantity();
+			if(newQuantity>oldQuantity){
+				newAllocation.setQuantity(existingAllocation.getQuantity());
+				Allocation copiedAllocation = copyAllocationInNewObject(newAllocation, currentDate);
+				copiedAllocation.setQuantity(newQuantity-oldQuantity);
+				copiedAllocation.setBuyDate(currentDate);
+				persistList.add(copiedAllocation);
+			}else {
+			}
+		}
+		persistList.addAll(newAllocationList);
+//		persistList.addAll(existingAllocationList);
+		updatePercLatest(persistList);
+		updatePercCurrent(persistList);
+ 		persistPortfolio(portfolio, persistList);
+
+	}
+	public Map<String,Allocation> getMapPerETF(List<Allocation> allocationList){
+		Map<String,Allocation> dataMap = new HashMap<>();
+		for(Allocation allocation:allocationList){
+			String ticker = allocation.getFund().getTicker();
+			if(dataMap.containsKey(ticker)){
+				Allocation existingAllocation = dataMap.get(ticker);
+				allocation.setQuantity(existingAllocation.getQuantity()+allocation.getQuantity());
+			}
+			dataMap.put(ticker,allocation);
+				
+		}
+		return dataMap;
+	}
+	
+	public List<Allocation> rebalanceBond(Portfolio portfolio,List<Allocation> bondAllocationList,List<Allocation>updatedAllocationList,Date date){
 		List<Allocation> updatedBondAllocationList = updatedAllocationList;
 		Calendar cal = Calendar.getInstance();
  		cal.setTime(date);
@@ -151,7 +198,8 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 			Allocation newAllocation = copyAllocationInNewObject(existingAllocation, currentDate);
 			updatedBondAllocationList.add(newAllocation);
 		}
- 		persistPortfolio(portfolio, updatedAllocationList);
+ 		return updatedAllocationList;
+ 		//persistPortfolio(portfolio, updatedAllocationList);
 	}
 	
 	public HashMap<AllocationType, List<Allocation>> getAllocationBasedOnType(List<Allocation> portfolioList){
@@ -271,7 +319,7 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 				newAllocationList.add(newAllocation);
 				log(allocation, newAllocation, currentDate);
 				newAllocation.setRebalanceDayQuantity(allocation.getQuantity());
-				newAllocation.setRebalanceDayPrice(cost);
+				newAllocation.setRebalanceDayPrice(allocation.getCostPrice());
 			}
 			else if (adjustment > 0 ){
 				double newPer =existingPerc+Math.abs(adjustment);
@@ -286,13 +334,12 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 				newInvestment+=newAllocation.getCostPrice();
 				newAllocationList.add(newAllocation);
 				newAllocation.setRebalanceDayQuantity(allocation.getQuantity());
-				newAllocation.setRebalanceDayPrice(cost);
+				newAllocation.setRebalanceDayPrice(allocation.getCostPrice());
 				log(allocation, newAllocation, currentDate);
 			}
 			
 		}
-		updatePercCurrent(newAllocationList);
-		updatePercLatest(newAllocationList);
+	
 
 		for(Allocation allocation:newAllocationList){
 			allocation.setInvestment(newInvestment);
@@ -348,12 +395,10 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 			newAllocation.setQuantity(number);
 			newAllocation.setIsActive("Y");
 			newAllocation.setRebalanceDayQuantity(allocation.getQuantity());
-			newAllocation.setRebalanceDayPrice(cost);
+			newAllocation.setRebalanceDayPrice(allocation.getCostPrice());
 			newAllocationList.add(newAllocation);
 			log(allocation, newAllocation, currentDate);
 		}
-		updatePercCurrent(newAllocationList);
-		updatePercLatest(newAllocationList);
 		return newAllocationList;
 	}
 	
@@ -389,7 +434,6 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 				allocation.setPercentage(0);
 			}
 		}
-		
 	}
 	
 	private int getFloorValue(RiskTolerance riskTolerance,double totalInvestment){

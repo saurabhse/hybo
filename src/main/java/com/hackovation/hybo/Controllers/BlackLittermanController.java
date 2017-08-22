@@ -7,10 +7,12 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Calendar;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -41,6 +43,7 @@ import com.hack17.hybo.domain.UserClientMapping;
 import com.hack17.hybo.repository.PortfolioRepository;
 import com.hackovation.hybo.CreatedBy;
 import com.hackovation.hybo.Util.HyboUtil;
+import com.hackovation.hybo.bean.DataVO;
 import com.hackovation.hybo.bean.ProfileRequest;
 import com.hackovation.hybo.bean.ProfileResponse;
 import com.hackovation.hybo.rebalance.Rebalance;
@@ -143,8 +146,16 @@ public class BlackLittermanController {
 			
 			List<ProfileResponse> responseList = new ArrayList<>();
 			List<Allocation> allocationList = portfolio.getAllocations();
+			
+			Calendar cal = Calendar.getInstance();
+			CurrentDate existingDate = (CurrentDate)portfolioRepository.getEntity(1, CurrentDate.class);
+			Date date = existingDate.getDate();
+			cal.setTime(date);
+	 		cal = trimTime(cal);
+
 			for(Allocation allocation:allocationList){
 				if(allocation.getCostPrice()==0d || allocation.getIsActive().equals("N"))continue;
+				double latestPrice = portfolioRepository.getIndexPriceForGivenDate(allocation.getFund().getTicker(), cal.getTime());
 				ProfileResponse response = new ProfileResponse();
 				response.setClientId(Integer.valueOf(clientId));
 				response.setLabel(allocation.getFund().getTicker());
@@ -162,9 +173,169 @@ public class BlackLittermanController {
 		return str;
 	}
 	
-	// Pending
 	@RequestMapping(value="/getRebalanceCid", method=RequestMethod.GET,produces = "application/json")
 	public @ResponseBody String getRebalancingListForGivenUser(@RequestParam(name="userId") String userId){
+		String str = "No Data To Display";
+		NumberFormat numFormat = new DecimalFormat("#########.##");
+		NumberFormat percFormat = new DecimalFormat("##.##");
+		StringBuffer sb = new StringBuffer("[");
+		SimpleDateFormat rebFor = new SimpleDateFormat("yyyy-MM");
+		try{
+			int clientId = getClientId(userId);
+			List<Portfolio>	portfolioList = portfolioRepository.getPortfolio(Integer.valueOf(clientId));
+			Portfolio portfolio = portfolioList.get(0);
+			
+			MyComparator comparator = new MyComparator();
+			
+			//Preparing data ticker wise and sorted by date
+			Map<String,Set<Allocation>> filteredMap = new HashMap<>();
+			for(Allocation allocation:portfolio.getAllocations()){
+				if(allocation.getCreatedBy().equals(CreatedBy.TLH.name()))continue;
+				String key = allocation.getFund().getTicker();
+				Set<Allocation> dataList = filteredMap.get(key);
+				if(dataList==null) dataList = new TreeSet(comparator);
+				dataList.add(allocation);
+				filteredMap.put(key,dataList);
+			}
+			Map<String,Set<DataVO>> rolledUpMap = new HashMap<>();
+			Set<String> keySet = filteredMap.keySet();
+			for(String etf:keySet){
+				Set<Allocation> allAllocations = filteredMap.get(etf);
+				Allocation prevAllocation = null;
+				Set<DataVO> dataSet = new LinkedHashSet<>();
+				DataVO data = null;
+				for(Allocation allocation:allAllocations){
+					
+					if(prevAllocation != null && prevAllocation.getCreatedBy().equals(allocation.getCreatedBy()) &&
+							prevAllocation.getTransactionDate().equals(allocation.getTransactionDate())){
+						data.setPerEtfPrice((data.getPerEtfPrice()+allocation.getCostPrice())/2);
+						data.setQuantity(data.getQuantity()+allocation.getQuantity());
+						data.setValue(data.getValue()+ (allocation.getQuantity()*allocation.getCostPrice()));
+					}else{
+						if(data!=null)
+							dataSet.add(data);
+						data = new DataVO();
+						data.setEtf(allocation.getFund().getTicker());
+						data.setQuantity(allocation.getQuantity());
+						data.setPerc(allocation.getPercentage());
+						data.setPerEtfPrice(allocation.getCostPrice());
+						data.setValue(allocation.getQuantity()*allocation.getCostPrice());
+						data.setTransactionDate(allocation.getTransactionDate());
+					}
+					
+					prevAllocation = allocation;
+				}
+				if(data!=null)
+					dataSet.add(data);
+				
+				double portfolioValue = 0.0;
+				for(DataVO tempData  :dataSet){
+					portfolioValue += tempData.getValue();
+				}
+				for(DataVO tempData  :dataSet){
+					double value = tempData.getQuantity();
+					try{
+						tempData.setPerc(value*100/portfolioValue);
+					}
+					catch(Exception e){
+						e.printStackTrace();
+						tempData.setPerc(0);
+					}
+				}
+				rolledUpMap.put(etf, dataSet);
+				
+			}
+			
+			
+			keySet = rolledUpMap.keySet();
+			for(String etf:keySet){
+				sb.append("{\"name\":\"").append(etf).append("\",");
+				Set<DataVO> dataVo =rolledUpMap.get(etf);
+				int i=0;
+				sb.append("\"data\"=[");
+				for(DataVO data:dataVo){
+					String dateAppender = rebFor.format(data.getTransactionDate());
+					sb.append("\"label\":\"").append(dateAppender);
+					if(i!=0){
+						sb.append("(Rebalance)\",");
+					}
+					else{
+						sb.append("\",");
+					}
+					i++;
+				}
+				
+				sb.append("],");
+				
+				sb.append("\"Value\"=[");
+				for(DataVO data:dataVo){
+					sb.append("\"label\":\"").append(numFormat.format(data.getValue()));
+					if(i!=0){
+						sb.append("(Rebalance)\",");
+					}
+					else{
+						sb.append("\",");
+					}
+					i++;
+				}
+				
+				sb.append("],");
+				sb.append("\"Price\"=[");
+				for(DataVO data:dataVo){
+					sb.append("\"label\":\"").append(numFormat.format(data.getPerEtfPrice()));
+					if(i!=0){
+						sb.append("(Rebalance)\",");
+					}
+					else{
+						sb.append("\",");
+					}
+					i++;
+				}
+				
+				sb.append("],");
+				sb.append("\"Allocation\"=[");
+				for(DataVO data:dataVo){
+					sb.append("\"label\":\"").append(percFormat.format(data.getPerc()));
+					if(i!=0){
+						sb.append("(Rebalance)\",");
+					}
+					else{
+						sb.append("\",");
+					}
+					i++;
+				}
+				
+				sb.append("],");
+				
+			}
+			str = sb.substring(0, sb.lastIndexOf(","));
+			str +="]";
+			sb.append("]");
+			System.out.println(sb);
+			
+/*			List<ProfileResponse> responseList = new ArrayList<>();
+			List<Allocation> allocationList = portfolio.getAllocations();
+			for(Allocation allocation:allocationList){
+				if(allocation.getCostPrice()==0d || allocation.getIsActive().equals("N"))continue;
+				ProfileResponse response = new ProfileResponse();
+				response.setClientId(Integer.valueOf(clientId));
+				response.setLabel(allocation.getFund().getTicker());
+				response.setValue(String.valueOf(allocation.getCostPrice()*allocation.getQuantity()));
+				responseList.add(response);
+			}
+			ObjectMapper responseMapper = new ObjectMapper();
+			str = responseMapper.writeValueAsString(responseList);
+
+*/			
+			
+		}catch(Exception e){
+			e.printStackTrace();
+		}
+		return str;
+	}	
+	
+	@RequestMapping(value="/getRebalanceCidOld", method=RequestMethod.GET,produces = "application/json")
+	public @ResponseBody String getRebalancingListForGivenUserOld(@RequestParam(name="userId") String userId){
 		String str = "No Data To Display";
 		NumberFormat numFormat = new DecimalFormat("#########.##");
 		NumberFormat percFormat = new DecimalFormat("##.##%");
@@ -198,7 +369,7 @@ public class BlackLittermanController {
 					isRebalanceingDone=true;
 				for(Allocation allocation:allocationList){
 					String dateAppender = rebFor.format(allocation.getTransactionDate());
-					sb.append(",\"Price\":\"").append(numFormat.format(allocation.getRebalanceDayPrice())).append("\"");
+					sb.append(",\"Buying Price\":\"").append(numFormat.format(allocation.getRebalanceDayPrice())).append("\"");
 					if(isRebalanceingDone && i!=0)
 						sb.append(",\"Price On ").append(dateAppender).append("\":\"").append(numFormat.format(allocation.getCostPrice())).append("\"");
 					i++;
@@ -206,7 +377,7 @@ public class BlackLittermanController {
 				i=0;
 				for(Allocation allocation:allocationList){
 					String dateAppender = rebFor.format(allocation.getTransactionDate());
-					sb.append(",\"Value\":\"").append(numFormat.format(allocation.getRebalanceDayPrice()*allocation.getRebalanceDayQuantity())).append("\"");
+					sb.append(",\"Buying Value\":\"").append(numFormat.format(allocation.getRebalanceDayPrice()*allocation.getRebalanceDayQuantity())).append("\"");
 					if(isRebalanceingDone && i!=0){
 						sb.append(",\"Value On ").append(dateAppender).append("\":\"").append(numFormat.format(allocation.getCostPrice()*allocation.getRebalanceDayQuantity())).append("\"");
 						sb.append(",\"Rebalanced Value").append(dateAppender).append("\":\"").append(numFormat.format(allocation.getCostPrice()*allocation.getQuantity())).append("\"");
@@ -248,7 +419,8 @@ public class BlackLittermanController {
 			e.printStackTrace();
 		}
 		return str;
-	}	
+	}		
+	
 	@Transactional
 	private int getClientId(String userId){
 		Object object = portfolioRepository.getEntityForAny(UserClientMapping.class,userId);
@@ -498,4 +670,14 @@ class MyComparator implements Comparator<Allocation>{
 	}
 	
 }
-*/}
+*/
+
+	private Calendar trimTime(Calendar cal){
+		cal.set(Calendar.HOUR_OF_DAY,0);
+		cal.set(Calendar.MINUTE,0);
+		cal.set(Calendar.SECOND,0);
+		cal.set(Calendar.MILLISECOND,0);
+	//	cal.set(Calendar.ZONE_OFFSET,0);
+		return cal;
+	}
+}
