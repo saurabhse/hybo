@@ -43,9 +43,14 @@ import com.hack17.hybo.domain.UserClientMapping;
 import com.hack17.hybo.repository.PortfolioRepository;
 import com.hackovation.hybo.CreatedBy;
 import com.hackovation.hybo.Util.HyboUtil;
+import com.hackovation.hybo.bean.Data;
 import com.hackovation.hybo.bean.DataVO;
+import com.hackovation.hybo.bean.EtfParent;
+import com.hackovation.hybo.bean.Price;
 import com.hackovation.hybo.bean.ProfileRequest;
 import com.hackovation.hybo.bean.ProfileResponse;
+import com.hackovation.hybo.bean.RebalanceResponse;
+import com.hackovation.hybo.bean.Value;
 import com.hackovation.hybo.rebalance.Rebalance;
 import com.hackovation.hybo.services.PortfolioService;
 
@@ -208,7 +213,7 @@ public class BlackLittermanController {
 					
 					if(prevAllocation != null && prevAllocation.getCreatedBy().equals(allocation.getCreatedBy()) &&
 							prevAllocation.getTransactionDate().equals(allocation.getTransactionDate())){
-						data.setPerEtfPrice((data.getPerEtfPrice()+allocation.getCostPrice())/2);
+						data.setPerEtfPrice(data.getPerEtfPrice());
 						data.setQuantity(data.getQuantity()+allocation.getQuantity());
 						data.setValue(data.getValue()+ (allocation.getQuantity()*allocation.getCostPrice()));
 					}else{
@@ -248,66 +253,59 @@ public class BlackLittermanController {
 			
 			
 			keySet = rolledUpMap.keySet();
+			RebalanceResponse response = new RebalanceResponse();
+			List<EtfParent> parentList = response.getName();
 			for(String etf:keySet){
-				sb.append("{\"name\":\"").append(etf).append("\",");
+				EtfParent parent = new EtfParent();
+				parent.setName(etf);
+				List<Data> dataList = parent.getData();
+				List<com.hackovation.hybo.bean.Allocation> allocatiobList = parent.getAllocation();
+				List<Price> priceList = parent.getPrice();
+				List<Value> valueList = parent.getValue();
 				Set<DataVO> dataVo =rolledUpMap.get(etf);
 				int i=0;
-				sb.append("\"data\":[");
 				for(DataVO data:dataVo){
+					Data dataObj = new Data();
 					String dateAppender = rebFor.format(data.getTransactionDate());
-					sb.append("{\"label\":\"").append(dateAppender);
-					if(i!=0){
-						sb.append("(Rebalance)\"}");
-					}
-					else{
-						sb.append("\"}");
-					}
+					if(i!=0)
+						dateAppender += "(Rebalance)";
+					dataObj.setLabel(dateAppender);
+					dataList.add(dataObj);
 				}
 				
-				sb.append("],");
 				
-				sb.append("\"Value\":[");
 				for(DataVO data:dataVo){
-					sb.append("{\"value\":\"").append(numFormat.format(data.getValue()));
-					if(i!=0){
-						sb.append("(Rebalance)\"}");
-					}
-					else{
-						sb.append("\"}");
-					}
+					Value valueObj = new Value();
+					String value = numFormat.format(data.getValue());
+					if(i!=0)
+						value += "(Rebalance)";
+					valueObj.setValue(value);
+					valueList.add(valueObj);
 				}
 				
-				sb.append("],");
-				sb.append("\"Price\":[");
 				for(DataVO data:dataVo){
-					sb.append("{\"value\":\"").append(numFormat.format(data.getPerEtfPrice()));
-					if(i!=0){
-						sb.append("(Rebalance)\"}");
-					}
-					else{
-						sb.append("\"}");
-					}
+					Price price = new Price();
+					String value = numFormat.format(data.getPerEtfPrice());
+					if(i!=0)
+						value += "(Rebalance)";
+					price.setValue(value);
+					priceList.add(price);
 				}
 				
-				sb.append("],");
-				sb.append("\"Allocation\":[");
 				for(DataVO data:dataVo){
-					sb.append("{\"value\":\"").append(percFormat.format(data.getPerc()));
-					if(i!=0){
-						sb.append("(Rebalance)\"}");
-					}
-					else{
-						sb.append("\"}");
-					}
+					com.hackovation.hybo.bean.Allocation allocation = new com.hackovation.hybo.bean.Allocation();
+					String value = percFormat.format(data.getPerc());
+					if(i!=0)
+						value += "Rebalance";
+					allocation.setValue(value);
+					allocatiobList.add(allocation);
 				}
-				
-				sb.append("]},");
-				i++;
+				parentList.add(parent);
 			}
-			str = sb.substring(0, sb.lastIndexOf(","));
-			str +="]";
-			sb.append("]");
-			System.out.println(sb);
+			ObjectMapper responseMapper = new ObjectMapper();
+			str = responseMapper.writeValueAsString(parentList);
+
+			System.out.println(str);
 			
 /*			List<ProfileResponse> responseList = new ArrayList<>();
 			List<Allocation> allocationList = portfolio.getAllocations();
