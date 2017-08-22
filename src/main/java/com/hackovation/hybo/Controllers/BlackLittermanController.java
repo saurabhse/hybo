@@ -262,7 +262,6 @@ public class BlackLittermanController {
 					else{
 						sb.append("\"}");
 					}
-					i++;
 				}
 				
 				sb.append("],");
@@ -276,7 +275,6 @@ public class BlackLittermanController {
 					else{
 						sb.append("\"}");
 					}
-					i++;
 				}
 				
 				sb.append("],");
@@ -289,7 +287,6 @@ public class BlackLittermanController {
 					else{
 						sb.append("\"}");
 					}
-					i++;
 				}
 				
 				sb.append("],");
@@ -302,11 +299,10 @@ public class BlackLittermanController {
 					else{
 						sb.append("\"}");
 					}
-					i++;
 				}
 				
 				sb.append("]},");
-				
+				i++;
 			}
 			str = sb.substring(0, sb.lastIndexOf(","));
 			str +="]";
