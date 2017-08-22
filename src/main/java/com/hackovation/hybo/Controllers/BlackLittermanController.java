@@ -252,55 +252,55 @@ public class BlackLittermanController {
 				sb.append("{\"name\":\"").append(etf).append("\",");
 				Set<DataVO> dataVo =rolledUpMap.get(etf);
 				int i=0;
-				sb.append("\"data\"=[");
+				sb.append("\"data\":[");
 				for(DataVO data:dataVo){
 					String dateAppender = rebFor.format(data.getTransactionDate());
 					sb.append("\"label\":\"").append(dateAppender);
 					if(i!=0){
-						sb.append("(Rebalance)\",");
+						sb.append("(Rebalance)\"");
 					}
 					else{
-						sb.append("\",");
+						sb.append("\"");
 					}
 					i++;
 				}
 				
 				sb.append("],");
 				
-				sb.append("\"Value\"=[");
+				sb.append("\"Value\":[");
 				for(DataVO data:dataVo){
 					sb.append("\"label\":\"").append(numFormat.format(data.getValue()));
 					if(i!=0){
-						sb.append("(Rebalance)\",");
+						sb.append("(Rebalance)\"");
 					}
 					else{
-						sb.append("\",");
+						sb.append("\"");
 					}
 					i++;
 				}
 				
 				sb.append("],");
-				sb.append("\"Price\"=[");
+				sb.append("\"Price\":[");
 				for(DataVO data:dataVo){
 					sb.append("\"label\":\"").append(numFormat.format(data.getPerEtfPrice()));
 					if(i!=0){
-						sb.append("(Rebalance)\",");
+						sb.append("(Rebalance)\"");
 					}
 					else{
-						sb.append("\",");
+						sb.append("\"");
 					}
 					i++;
 				}
 				
 				sb.append("],");
-				sb.append("\"Allocation\"=[");
+				sb.append("\"Allocation\":[");
 				for(DataVO data:dataVo){
 					sb.append("\"label\":\"").append(percFormat.format(data.getPerc()));
 					if(i!=0){
-						sb.append("(Rebalance)\",");
+						sb.append("(Rebalance)\"");
 					}
 					else{
-						sb.append("\",");
+						sb.append("\"");
 					}
 					i++;
 				}
