@@ -164,8 +164,8 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 				copiedAllocation.setQuantity(newQuantity-oldQuantity);
 				copiedAllocation.setBuyDate(currentDate);
 				persistList.add(copiedAllocation);
-			}else {
 			}
+			newAllocation.setBuyDate(existingAllocation.getBuyDate());
 		}
 		persistList.addAll(newAllocationList);
 //		persistList.addAll(existingAllocationList);

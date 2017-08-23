@@ -13,6 +13,7 @@ import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -193,19 +194,20 @@ public class BlackLittermanController {
 			MyComparator comparator = new MyComparator();
 			
 			//Preparing data ticker wise and sorted by date
-			Map<String,Set<Allocation>> filteredMap = new HashMap<>();
+			Map<String,List<Allocation>> filteredMap = new HashMap<>();
 			for(Allocation allocation:portfolio.getAllocations()){
 				if(allocation.getCreatedBy().equals(CreatedBy.TLH.name()))continue;
 				String key = allocation.getFund().getTicker();
-				Set<Allocation> dataList = filteredMap.get(key);
-				if(dataList==null) dataList = new TreeSet(comparator);
+				List<Allocation> dataList = filteredMap.get(key);
+				if(dataList==null) dataList = new LinkedList<>();
 				dataList.add(allocation);
+				Collections.sort(dataList,comparator);
 				filteredMap.put(key,dataList);
 			}
 			Map<String,Set<DataVO>> rolledUpMap = new HashMap<>();
 			Set<String> keySet = filteredMap.keySet();
 			for(String etf:keySet){
-				Set<Allocation> allAllocations = filteredMap.get(etf);
+				List<Allocation> allAllocations = filteredMap.get(etf);
 				Allocation prevAllocation = null;
 				Set<DataVO> dataSet = new LinkedHashSet<>();
 				DataVO data = null;
@@ -216,6 +218,7 @@ public class BlackLittermanController {
 						data.setPerEtfPrice(data.getPerEtfPrice());
 						data.setQuantity(data.getQuantity()+allocation.getQuantity());
 						data.setValue(data.getValue()+ (allocation.getQuantity()*allocation.getCostPrice()));
+						data.setPerc(data.getPerc()+allocation.getPercentage());
 					}else{
 						if(data!=null)
 							dataSet.add(data);
@@ -232,13 +235,13 @@ public class BlackLittermanController {
 				}
 				if(data!=null)
 					dataSet.add(data);
-				
+				/*
 				double portfolioValue = 0.0;
 				for(DataVO tempData  :dataSet){
 					portfolioValue += tempData.getValue();
 				}
 				for(DataVO tempData  :dataSet){
-					double value = tempData.getQuantity();
+					double value = tempData.getValue();
 					try{
 						tempData.setPerc(value*100/portfolioValue);
 					}
@@ -246,7 +249,7 @@ public class BlackLittermanController {
 						e.printStackTrace();
 						tempData.setPerc(0);
 					}
-				}
+				}*/
 				rolledUpMap.put(etf, dataSet);
 				
 			}
@@ -343,20 +346,21 @@ public class BlackLittermanController {
 			MyComparator comparator = new MyComparator();
 			
 			//Preparing data ticker wise and sorted by date
-			Map<String,Set<Allocation>> filteredMap = new HashMap<>();
+			Map<String,List<Allocation>> filteredMap = new HashMap<>();
 			for(Allocation allocation:portfolio.getAllocations()){
 				if(allocation.getCreatedBy().equals(CreatedBy.TLH.name()))continue;
 				String key = allocation.getFund().getTicker();
-				Set<Allocation> dataList = filteredMap.get(key);
-				if(dataList==null) dataList = new TreeSet(comparator);
+				List<Allocation> dataList = filteredMap.get(key);
+				if(dataList==null) dataList = new LinkedList<>();
 				dataList.add(allocation);
+				Collections.sort(dataList,comparator);
 				filteredMap.put(key,dataList);
 			}
 			
 			Set<String> keySet = filteredMap.keySet();
 			for(String etf:keySet){
 				sb.append("{\"ETF\":\"").append(etf).append("\"");
-				Set<Allocation> allocationList =filteredMap.get(etf);
+				List<Allocation> allocationList =filteredMap.get(etf);
 				int i=0;
 				boolean isRebalanceingDone = false;
 				if(allocationList.size()>1)
