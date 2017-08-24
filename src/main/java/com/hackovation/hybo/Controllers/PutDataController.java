@@ -33,6 +33,7 @@ import com.hack17.hybo.domain.MarketStatus;
 import com.hack17.hybo.domain.MarketWeight;
 import com.hack17.hybo.domain.Portfolio;
 import com.hack17.hybo.repository.PortfolioRepository;
+import com.hack17.hybo.repository.ReferenceDataRepository;
 import com.hackovation.hybo.Util.HyboUtil;
 
 @RestController
@@ -43,6 +44,9 @@ public class PutDataController {
 	@Autowired
 	PortfolioRepository portfolioRepository;
 	SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd");
+	
+	@Autowired
+	ReferenceDataRepository refDataRepo;
 	
 	@RequestMapping(method=RequestMethod.GET,value="/index")
 	public void putIndexData() {
@@ -108,16 +112,29 @@ public class PutDataController {
 		System.out.println(stopWatch.shortSummary());
 	}	
 	public void processFiles(){
-//		processFileAndPushInDatabase("CRSP_US_Large_Cap_Historical_Rates.csv","CRSPTM1");
-//		processFileAndPushInDatabase("CRSP_US_Mid_Cap_Historical_Rates.csv","CRSPLC1");
-//		processFileAndPushInDatabase("CRSP_US_Small_Cap_Historical_Rates.csv","CRSPMI1");
-//		processFileAndPushInDatabase("CRSP_US_Total_Market_Historical_Rates.csv","CRSPSC1");
-//		processFileAndPushInDatabaseOverloaded("shv_Historical_Rates.csv","SHV");
-//		processFileAndPushInDatabaseOverloaded("lqd_Historical_Rates.csv","LQD");
-//		processFileAndPushInDatabaseOverloaded("vti.csv","VTI");
-//		processFileAndPushInDatabaseOverloaded("vtv.csv","VTV");
-//		processFileAndPushInDatabaseOverloaded("voe.csv","VOE");
-//		processFileAndPushInDatabaseOverloaded("vbr.csv","VBR");
+		processFileAndPushInDatabase("CRSP_US_Large_Cap_Historical_Rates.csv","CRSPTM1");
+		processFileAndPushInDatabase("CRSP_US_Mid_Cap_Historical_Rates.csv","CRSPLC1");
+		processFileAndPushInDatabase("CRSP_US_Small_Cap_Historical_Rates.csv","CRSPMI1");
+		processFileAndPushInDatabase("CRSP_US_Total_Market_Historical_Rates.csv","CRSPSC1");
+		processFileAndPushInDatabaseOverloaded("shv_Historical_Rates.csv","SHV");
+		processFileAndPushInDatabaseOverloaded("lqd_Historical_Rates.csv","LQD");
+		processFileAndPushInDatabaseOverloaded("vti.csv","VTI");
+		processFileAndPushInDatabaseOverloaded("vtv.csv","VTV");
+		processFileAndPushInDatabaseOverloaded("voe.csv","VOE");
+		processFileAndPushInDatabaseOverloaded("vbr.csv","VBR");
+		processFileAndPushInDatabaseOverloaded("iemg.csv","IEMG");
+		processFileAndPushInDatabaseOverloaded("mub.csv","MUB");
+		processFileAndPushInDatabaseOverloaded("schb.csv","SCHB");
+		processFileAndPushInDatabaseOverloaded("schd.csv","SCHD");
+		processFileAndPushInDatabaseOverloaded("schf.csv","SCHF");
+		processFileAndPushInDatabaseOverloaded("schp.csv","SCHP");
+		processFileAndPushInDatabaseOverloaded("tfi.csv","TFI");
+		processFileAndPushInDatabaseOverloaded("vde.csv","VDE");
+		processFileAndPushInDatabaseOverloaded("vea.csv","VEA");
+		processFileAndPushInDatabaseOverloaded("vig.csv","VIG");
+		processFileAndPushInDatabaseOverloaded("vtip.csv","VTIP");
+		processFileAndPushInDatabaseOverloaded("vwo.csv","VWO");
+		processFileAndPushInDatabaseOverloaded("xle.csv","XLE");
 	}
 	public void processMarketCap(){
 		List<Integer> yearList = Arrays.asList(2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017);
@@ -151,6 +168,13 @@ public class PutDataController {
 			Fund f = new Fund(tick);
 			portfolioRepository.persist(f);
 		}
+		refDataRepo.createCorrelatedFund("VTI", "SCHB");
+		refDataRepo.createCorrelatedFund("VEA", "SCHF");
+		refDataRepo.createCorrelatedFund("VWO", "IEMG");
+		refDataRepo.createCorrelatedFund("VIG", "SCHD");
+		refDataRepo.createCorrelatedFund("XLE", "VDE");
+		refDataRepo.createCorrelatedFund("SCHP", "VTIP");
+		refDataRepo.createCorrelatedFund("MUB", "TFI"); 
 	}
 	public void processFileAndPushInDatabase(String fileName,String index){
 		try{
