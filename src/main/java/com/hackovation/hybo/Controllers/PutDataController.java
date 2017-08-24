@@ -98,6 +98,14 @@ public class PutDataController {
 		stopWatch.stop();
 		System.out.println(stopWatch.shortSummary());
 	}
+	@RequestMapping(method=RequestMethod.GET,value="/getCurrentDate")
+	public @ResponseBody String getSystemDate() throws ParseException {
+		CurrentDate existingDate = (CurrentDate)portfolioRepository.getEntity(1, CurrentDate.class);
+		SimpleDateFormat sdf = new SimpleDateFormat("dd-MMMMM-yyyy");
+		String dateStr = sdf.format(existingDate.getDate());
+		return dateStr;
+	}
+
 	@RequestMapping(method=RequestMethod.GET,value="/updateMarketStatus")
 	public void updateMarketStatus(@RequestParam(name="fluc") String fluctuating,@RequestParam(name="down")String down,@RequestParam(name="up")String up) throws ParseException {
 		System.out.println("Updating Market Status");
