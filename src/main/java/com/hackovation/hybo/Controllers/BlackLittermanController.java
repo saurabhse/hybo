@@ -12,6 +12,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -51,6 +52,8 @@ import com.hackovation.hybo.bean.Price;
 import com.hackovation.hybo.bean.ProfileRequest;
 import com.hackovation.hybo.bean.ProfileResponse;
 import com.hackovation.hybo.bean.RebalanceResponse;
+import com.hackovation.hybo.bean.TLHInternalResponse;
+import com.hackovation.hybo.bean.TLHResponse;
 import com.hackovation.hybo.bean.Value;
 import com.hackovation.hybo.rebalance.Rebalance;
 import com.hackovation.hybo.services.PortfolioService;
@@ -177,6 +180,73 @@ public class BlackLittermanController {
 			e.printStackTrace();
 		}
 		return str;
+	}
+	
+	@RequestMapping(value="/getTLHCid", method=RequestMethod.GET,produces = "application/json")
+	public @ResponseBody String getTLHListGivenUser(@RequestParam(name="userId") String userId) throws JsonProcessingException{
+		int clientId = getClientId(userId);
+		
+		List<Portfolio>	portfolioList = portfolioRepository.getPortfolio(Integer.valueOf(clientId));
+		Portfolio portfolio = portfolioList.get(0);
+		MyComparator comparator = new MyComparator();
+		
+		//Preparing data ticker wise and sorted by date
+		Map<String,List<Allocation>> filteredMap = new HashMap<>();
+		for(Allocation allocation:portfolio.getAllocations()){
+			if(!allocation.getCreatedBy().equals(CreatedBy.TLH.name()))continue;
+			String key = allocation.getFund().getTicker();
+			List<Allocation> dataList = filteredMap.get(key);
+			if(dataList==null) dataList = new LinkedList<>();
+			dataList.add(allocation);
+			Collections.sort(dataList,comparator);
+			filteredMap.put(key,dataList);
+		}
+		
+		
+		List<TLHResponse> response = new ArrayList<>();
+		
+		processTLHData(response,filteredMap);
+		ObjectMapper responseMapper = new ObjectMapper();
+		String str = responseMapper.writeValueAsString(response);
+		System.out.println(str);
+		return str;
+	}
+	
+	private void processTLHData(List<TLHResponse> response,Map<String,List<Allocation>> filteredMap){
+		NumberFormat numFormat = new DecimalFormat("#########.##");
+		SimpleDateFormat rebFor = new SimpleDateFormat("yyyy-MM");
+		Set<String> keys = filteredMap.keySet();
+		TLHResponse responseList = new TLHResponse();
+		boolean processFurther = false;
+		for(String etf:keys){
+			List<Allocation> allocationList = filteredMap.get(etf);
+			if(allocationList != null&& allocationList.size()>0){
+				TLHInternalResponse responseObject = new TLHInternalResponse();
+				responseObject.setTicker(etf);
+				Date prevDate = null;
+				Iterator<Allocation> iter = allocationList.iterator();
+				while(iter.hasNext())
+				{
+					Allocation allocation = iter.next();
+					Date transactionDate = allocation.getTransactionDate();
+					if(prevDate != null && prevDate != transactionDate){
+						processFurther=true;
+						break;
+					}
+					responseObject.setPrice(numFormat.format(allocation.getRebalanceDayPrice()));
+					responseObject.setDate(rebFor.format(allocation.getBuyDate()));
+					responseObject.setValue(numFormat.format(allocation.getRebalanceDayQuantity()*allocation.getRebalanceDayPrice()));
+					responseObject.setTLH_Price(numFormat.format(allocation.getCostPrice()));
+					responseObject.setTLH_Value(numFormat.format(allocation.getCostPrice()*allocation.getQuantity()));
+					iter.remove();
+					prevDate  =allocation.getTransactionDate();
+				}
+				responseList.getIternalList().add(responseObject);
+			}
+		}
+		response.add(responseList);
+		if(processFurther)
+			processTLHData(response,filteredMap);
 	}
 	
 	@RequestMapping(value="/getRebalanceCid", method=RequestMethod.GET,produces = "application/json")
