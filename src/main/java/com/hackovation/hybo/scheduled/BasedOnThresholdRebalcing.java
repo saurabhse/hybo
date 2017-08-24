@@ -138,9 +138,10 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 		}
 		
 		List<Allocation> newAllocationList = rebalanceEquity(portfolio,eqAllocationList,bondAllocationList,date);
-		if(newAllocationList != null && newAllocationList.size()>0)
+		if(newAllocationList != null && newAllocationList.size()>0){
 			newAllocationList = rebalanceBond(portfolio, bondAllocationList,newAllocationList,date);
-		persistAllocationInDatabase(portfolio,portfolioList,newAllocationList,date);
+			persistAllocationInDatabase(portfolio,portfolioList,newAllocationList,date);
+		}
 	}
 	
 	public void persistAllocationInDatabase(Portfolio portfolio,List<Allocation> existingAllocationList,List<Allocation> newAllocationList,Date date){
