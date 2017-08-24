@@ -104,7 +104,7 @@ public class PutDataController {
 	public @ResponseBody String getSystemDate() throws ParseException {
 		CurrentDate existingDate = (CurrentDate)portfolioRepository.getEntity(1, CurrentDate.class);
 		SimpleDateFormat sdf = new SimpleDateFormat("dd-MMMMM-yyyy");
-		String dateStr = sdf.format(existingDate.getDate());
+		String dateStr = "{\"label\":\""+sdf.format(existingDate.getDate())+"\"}";
 		return dateStr;
 	}
 
