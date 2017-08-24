@@ -236,8 +236,10 @@ public class BlackLittermanController {
 					responseObject.setPrice(numFormat.format(allocation.getRebalanceDayPrice()));
 					responseObject.setDate(rebFor.format(allocation.getBuyDate()));
 					responseObject.setValue(numFormat.format(allocation.getRebalanceDayQuantity()*allocation.getRebalanceDayPrice()));
-					responseObject.setTLH_Price(numFormat.format(allocation.getCostPrice()));
-					responseObject.setTLH_Value(numFormat.format(allocation.getCostPrice()*allocation.getQuantity()));
+					responseObject.setQuantity(String.valueOf(allocation.getRebalanceDayQuantity()));
+					responseObject.setTlhPrice(numFormat.format(allocation.getCostPrice()));
+					responseObject.setTlhValue(numFormat.format(allocation.getCostPrice()*allocation.getQuantity()));
+					responseObject.setTlhQuantity(String.valueOf(allocation.getQuantity()));
 					iter.remove();
 					prevDate  =allocation.getTransactionDate();
 				}
