@@ -20,6 +20,7 @@ import javax.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.util.StopWatch;
 import org.springframework.util.StringUtils;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -39,6 +40,7 @@ import com.hackovation.hybo.Util.HyboUtil;
 @RestController
 @RequestMapping(value="/process")
 @Transactional
+@CrossOrigin
 public class PutDataController {
 
 	@Autowired
