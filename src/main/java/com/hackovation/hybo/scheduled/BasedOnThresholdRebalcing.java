@@ -17,6 +17,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.hack17.hybo.domain.Action;
 import com.hack17.hybo.domain.Allocation;
 import com.hack17.hybo.domain.CurrentDate;
 import com.hack17.hybo.domain.InvestorProfile;
@@ -164,8 +165,19 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 				copiedAllocation.setQuantity(newQuantity-oldQuantity);
 				copiedAllocation.setBuyDate(currentDate);
 				persistList.add(copiedAllocation);
+				copiedAllocation.setPortfolio(portfolio);
+				dbLoggerService.logTransaction(copiedAllocation,0,null,newQuantity-oldQuantity,Action.BUY,com.hack17.hybo.domain.CreatedBy.REBAL);
 			}
+			
 			newAllocation.setBuyDate(existingAllocation.getBuyDate());
+			if(oldQuantity>newQuantity){
+				//just log it for TLH
+				existingAllocation.setPortfolio(portfolio);
+				dbLoggerService.logTransaction(existingAllocation,newAllocation.getCostPrice(),newAllocation.getTransactionDate(),existingAllocation.getQuantity()-newAllocation.getQuantity(),
+						Action.SELL,com.hack17.hybo.domain.CreatedBy.REBAL);
+						
+
+			}
 		}
 		persistList.addAll(newAllocationList);
 //		persistList.addAll(existingAllocationList);
