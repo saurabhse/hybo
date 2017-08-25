@@ -1,8 +1,12 @@
 package com.hackovation.hybo.Controllers;
 
+import static com.hack17.hybo.util.DateTimeUtil.getDatedd_MMM_yyyy;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.text.DecimalFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -14,6 +18,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.stream.Stream;
 
 import javax.transaction.Transactional;
 
@@ -49,6 +54,33 @@ public class PutDataController {
 	
 	@Autowired
 	ReferenceDataRepository refDataRepo;
+	
+	@RequestMapping(method=RequestMethod.GET,value="/securityPrices")
+	public void putSecurityPrices() {
+		System.out.println("Started processing historical data");
+		StopWatch stopWatch = new StopWatch("Historical Data Persistence");
+		stopWatch.start();
+		File priceDir = new File("./data/prices");
+		for(File priceFile : priceDir.listFiles()){
+			String fileName = priceFile.getName();
+			String etf = fileName.substring(0, fileName.indexOf("."));
+			System.out.println(etf);
+			try(Stream<String> fileLines = Files.lines(Paths.get(priceFile.toURI()))){
+				fileLines.forEach(line->{
+					String[] lineData = line.split(",");
+					if(lineData.length !=6)
+						return;
+					if(lineData[0].contains("Date"))
+						return;
+					refDataRepo.createPrice(etf.toUpperCase(), Double.parseDouble(lineData[4]), getDatedd_MMM_yyyy(lineData[0]));
+				});
+			} catch (IOException e) {
+				System.out.println(e.getMessage());// TODO Auto-generated catch block
+			}
+		}
+		stopWatch.stop();
+		System.out.println(stopWatch.shortSummary());
+	}
 	
 	@RequestMapping(method=RequestMethod.GET,value="/index")
 	public void putIndexData() {
@@ -178,6 +210,23 @@ public class PutDataController {
 			Fund f = new Fund(tick);
 			portfolioRepository.persist(f);
 		}
+		refDataRepo.createFund("VEA");
+		refDataRepo.createFund("VWO");
+		refDataRepo.createFund("VIG");
+		refDataRepo.createFund("XLE");
+		refDataRepo.createFund("SCHP");
+		refDataRepo.createFund("MUB");
+		refDataRepo.createFund("SCHB");
+		refDataRepo.createFund("SCHF");
+		refDataRepo.createFund("IEMG");
+		refDataRepo.createFund("SCHD");
+		refDataRepo.createFund("VDE");
+		refDataRepo.createFund("VTIP");
+		refDataRepo.createFund("TFI");
+		refDataRepo.createFund("IVE");
+		refDataRepo.createFund("IWS");
+		refDataRepo.createFund("IWN");
+		refDataRepo.createFund("VCIT");
 		refDataRepo.createCorrelatedFund("VTI", "SCHB");
 		refDataRepo.createCorrelatedFund("VEA", "SCHF");
 		refDataRepo.createCorrelatedFund("VWO", "IEMG");
@@ -185,6 +234,10 @@ public class PutDataController {
 		refDataRepo.createCorrelatedFund("XLE", "VDE");
 		refDataRepo.createCorrelatedFund("SCHP", "VTIP");
 		refDataRepo.createCorrelatedFund("MUB", "TFI"); 
+		refDataRepo.createCorrelatedFund("VTV", "IVE");
+		refDataRepo.createCorrelatedFund("VOE", "IWS");
+		refDataRepo.createCorrelatedFund("VBR", "IWN");
+		refDataRepo.createCorrelatedFund("LQD", "VCIT");
 	}
 	public void processFileAndPushInDatabase(String fileName,String index){
 		try{
