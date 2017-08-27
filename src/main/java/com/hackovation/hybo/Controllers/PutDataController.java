@@ -1,6 +1,7 @@
 package com.hackovation.hybo.Controllers;
 
 import static com.hack17.hybo.util.DateTimeUtil.getDatedd_MMM_yyyy;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
@@ -34,10 +35,12 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.hack17.hybo.domain.CurrentDate;
 import com.hack17.hybo.domain.Fund;
+import com.hack17.hybo.domain.IncomeTaxSlab;
 import com.hack17.hybo.domain.IndexPrice;
 import com.hack17.hybo.domain.MarketStatus;
 import com.hack17.hybo.domain.MarketWeight;
 import com.hack17.hybo.domain.Portfolio;
+import com.hack17.hybo.repository.IncomeTaxSlabRepository;
 import com.hack17.hybo.repository.PortfolioRepository;
 import com.hack17.hybo.repository.ReferenceDataRepository;
 import com.hackovation.hybo.Util.HyboUtil;
@@ -54,6 +57,79 @@ public class PutDataController {
 	
 	@Autowired
 	ReferenceDataRepository refDataRepo;
+	
+	@Autowired
+	IncomeTaxSlabRepository incomeTaxSlabRepo;
+	
+	@RequestMapping(method=RequestMethod.GET,value="/incometaxslabs")
+	public void insertIncomeTaxSlabs() {
+		System.out.println("Started processing historical data");
+		StopWatch stopWatch = new StopWatch("Historical Data Persistence");
+		stopWatch.start();
+		IncomeTaxSlab taxSlab = new IncomeTaxSlab(IncomeTaxSlab.TaxProfileType.SINGLE, 0d, 9325d, 10d);
+		incomeTaxSlabRepo.persist(taxSlab);
+		taxSlab = new IncomeTaxSlab(IncomeTaxSlab.TaxProfileType.SINGLE, 9326d, 37950d, 15d);
+		incomeTaxSlabRepo.persist(taxSlab);
+		taxSlab = new IncomeTaxSlab(IncomeTaxSlab.TaxProfileType.SINGLE, 37951d, 91900d, 25d);
+		incomeTaxSlabRepo.persist(taxSlab);
+		taxSlab = new IncomeTaxSlab(IncomeTaxSlab.TaxProfileType.SINGLE, 91901d, 191650d, 28d);
+		incomeTaxSlabRepo.persist(taxSlab);
+		taxSlab = new IncomeTaxSlab(IncomeTaxSlab.TaxProfileType.SINGLE, 191651d, 416700d, 33d);
+		incomeTaxSlabRepo.persist(taxSlab);
+		taxSlab = new IncomeTaxSlab(IncomeTaxSlab.TaxProfileType.SINGLE, 416701d, 418400d, 35d);
+		incomeTaxSlabRepo.persist(taxSlab);
+		taxSlab = new IncomeTaxSlab(IncomeTaxSlab.TaxProfileType.SINGLE, 418401d, null, 39.6d);
+		incomeTaxSlabRepo.persist(taxSlab);
+		
+		//Married Filing Jointly / Qualifying Widow
+		taxSlab = new IncomeTaxSlab(IncomeTaxSlab.TaxProfileType.MARRIED_FILING_JOINTLY_OR_QUALIFYING_WIDOW, 0d, 18650d, 10d);
+		incomeTaxSlabRepo.persist(taxSlab);
+		taxSlab = new IncomeTaxSlab(IncomeTaxSlab.TaxProfileType.MARRIED_FILING_JOINTLY_OR_QUALIFYING_WIDOW, 18651d, 75900d, 15d);
+		incomeTaxSlabRepo.persist(taxSlab);
+		taxSlab = new IncomeTaxSlab(IncomeTaxSlab.TaxProfileType.MARRIED_FILING_JOINTLY_OR_QUALIFYING_WIDOW, 75901d, 153100d, 25d);
+		incomeTaxSlabRepo.persist(taxSlab);
+		taxSlab = new IncomeTaxSlab(IncomeTaxSlab.TaxProfileType.MARRIED_FILING_JOINTLY_OR_QUALIFYING_WIDOW, 153101d, 233350d, 28d);
+		incomeTaxSlabRepo.persist(taxSlab);
+		taxSlab = new IncomeTaxSlab(IncomeTaxSlab.TaxProfileType.MARRIED_FILING_JOINTLY_OR_QUALIFYING_WIDOW, 233351d, 416700d, 33d);
+		incomeTaxSlabRepo.persist(taxSlab);
+		taxSlab = new IncomeTaxSlab(IncomeTaxSlab.TaxProfileType.MARRIED_FILING_JOINTLY_OR_QUALIFYING_WIDOW, 416701d, 470700d, 35d);
+		incomeTaxSlabRepo.persist(taxSlab);
+		taxSlab = new IncomeTaxSlab(IncomeTaxSlab.TaxProfileType.MARRIED_FILING_JOINTLY_OR_QUALIFYING_WIDOW, 470701d, null, 39.6d);
+		incomeTaxSlabRepo.persist(taxSlab);
+		
+		//Married Filing Separately
+		taxSlab = new IncomeTaxSlab(IncomeTaxSlab.TaxProfileType.MARRIED_FILING_SEPARATELY, 0d, 9325d, 10d);
+		incomeTaxSlabRepo.persist(taxSlab);
+		taxSlab = new IncomeTaxSlab(IncomeTaxSlab.TaxProfileType.MARRIED_FILING_SEPARATELY, 9326d, 37950d, 15d);
+		incomeTaxSlabRepo.persist(taxSlab);
+		taxSlab = new IncomeTaxSlab(IncomeTaxSlab.TaxProfileType.MARRIED_FILING_SEPARATELY, 37951d, 76550d, 25d);
+		incomeTaxSlabRepo.persist(taxSlab);
+		taxSlab = new IncomeTaxSlab(IncomeTaxSlab.TaxProfileType.MARRIED_FILING_SEPARATELY, 76551d, 116675d, 28d);
+		incomeTaxSlabRepo.persist(taxSlab);
+		taxSlab = new IncomeTaxSlab(IncomeTaxSlab.TaxProfileType.MARRIED_FILING_SEPARATELY, 116676d, 208350d, 33d);
+		incomeTaxSlabRepo.persist(taxSlab);
+		taxSlab = new IncomeTaxSlab(IncomeTaxSlab.TaxProfileType.MARRIED_FILING_SEPARATELY, 208351d, 235350d, 35d);
+		incomeTaxSlabRepo.persist(taxSlab);
+		taxSlab = new IncomeTaxSlab(IncomeTaxSlab.TaxProfileType.MARRIED_FILING_SEPARATELY, 235351d, null, 39.6d);
+		incomeTaxSlabRepo.persist(taxSlab);
+		
+		//Head of Household
+		taxSlab = new IncomeTaxSlab(IncomeTaxSlab.TaxProfileType.HEAD_OF_HOUSEHOLD, 0d, 13350d, 10d);
+		incomeTaxSlabRepo.persist(taxSlab);
+		taxSlab = new IncomeTaxSlab(IncomeTaxSlab.TaxProfileType.HEAD_OF_HOUSEHOLD, 13351d, 50800d, 15d);
+		incomeTaxSlabRepo.persist(taxSlab);
+		taxSlab = new IncomeTaxSlab(IncomeTaxSlab.TaxProfileType.HEAD_OF_HOUSEHOLD, 50801d, 131200d, 25d);
+		incomeTaxSlabRepo.persist(taxSlab);
+		taxSlab = new IncomeTaxSlab(IncomeTaxSlab.TaxProfileType.HEAD_OF_HOUSEHOLD, 131201d, 212500d, 28d);
+		incomeTaxSlabRepo.persist(taxSlab);
+		taxSlab = new IncomeTaxSlab(IncomeTaxSlab.TaxProfileType.HEAD_OF_HOUSEHOLD, 212501d, 416700d, 33d);
+		incomeTaxSlabRepo.persist(taxSlab);
+		taxSlab = new IncomeTaxSlab(IncomeTaxSlab.TaxProfileType.HEAD_OF_HOUSEHOLD, 416701d, 444550d, 35d);
+		incomeTaxSlabRepo.persist(taxSlab);
+		taxSlab = new IncomeTaxSlab(IncomeTaxSlab.TaxProfileType.HEAD_OF_HOUSEHOLD, 444551d, null, 39.6d);
+		stopWatch.stop();
+		System.out.println(stopWatch.shortSummary());
+	}
 	
 	@RequestMapping(method=RequestMethod.GET,value="/securityPrices")
 	public void putSecurityPrices() {
