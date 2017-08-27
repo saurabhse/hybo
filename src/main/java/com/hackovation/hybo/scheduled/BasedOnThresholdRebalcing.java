@@ -64,7 +64,7 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 	public void cron(){
 		System.out.println("Cron Running -> "+Calendar.getInstance().getTime());
 		CurrentDate existingDate = (CurrentDate)portfolioRepository.getEntity(1, CurrentDate.class);
-		//rebalance(existingDate.getDate());
+		rebalance(existingDate.getDate());
 	}
 	@Override
 	@Transactional
@@ -403,7 +403,6 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 			double cost = (equityPortion*perc)/100;
 			int number = Double.valueOf(cost/etfTodayPrice).intValue();
 			cost = etfTodayPrice;
-			System.out.println("Aman "+ticker+" -- "+cost);
 			investment += cost*number;
 			newAllocation.setCostPrice(cost);
 			newAllocation.setPercentage(perc);

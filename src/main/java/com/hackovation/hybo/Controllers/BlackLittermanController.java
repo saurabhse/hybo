@@ -223,11 +223,7 @@ public class BlackLittermanController {
 		String str = "No Data To Display";
 		try{
 			int clientId = getClientId(userId);
-			List<Portfolio>	portfolioList = portfolioRepository.getPortfolio(Integer.valueOf(clientId));
-			Portfolio portfolio = portfolioList.get(0);
 			
-			List<ProfileResponse> responseList = new ArrayList<>();
-			List<Allocation> allocationList = portfolio.getAllocations();
 			Calendar systemDate = Calendar.getInstance();
 			Calendar cal = Calendar.getInstance();
 			CurrentDate existingDate = (CurrentDate)portfolioRepository.getEntity(1, CurrentDate.class);
@@ -236,6 +232,10 @@ public class BlackLittermanController {
 	 		cal = trimTime(cal);
 	 		double totalValue=0.0;
 	 		while(true){
+				List<Portfolio>	portfolioList = portfolioRepository.getPortfolioBeforeDate(Integer.valueOf(clientId),cal.getTime());
+				Portfolio portfolio = portfolioList.get(0);
+				List<Allocation> allocationList = portfolio.getAllocations();
+	 			totalValue = 0.0;
 				for(Allocation allocation:allocationList){
 					if(allocation.getCostPrice()==0d || allocation.getIsActive().equals("N"))continue;
 					double latestPrice = portfolioRepository.getIndexPriceForGivenDate(allocation.getFund().getTicker(), cal.getTime());
@@ -244,13 +244,13 @@ public class BlackLittermanController {
 					response.setClientId(Integer.valueOf(clientId));
 					response.setLabel(allocation.getFund().getTicker()+"("+(allocation.getType().substring(0,1))+")");
 					response.setValue(String.valueOf(latestPrice*allocation.getQuantity()));
-				//	System.out.println("New Value "+allocation.getFund().getTicker()+","+latestPrice);
+					//System.out.println("	Data "+allocation.getFund().getTicker()+", Quantity: "+allocation.getQuantity()+
+						//	", old price : "+allocation.getCostPrice()+", Latest price: "+latestPrice+", Value: "+allocation.getQuantity()*latestPrice);
 					totalValue += allocation.getQuantity()*latestPrice;
-					responseList.add(response);
 				}
 				System.out.println("Total value of portfolio for user "+userId+" as of date "+cal.getTime()+" is: "+totalValue);
+				cal.add(Calendar.MONTH, 1);
 				if(cal.getTime().after(systemDate.getTime()))break;
-				cal.add(Calendar.YEAR, 1);
 	 		}
 			
 		}catch(Exception e){
