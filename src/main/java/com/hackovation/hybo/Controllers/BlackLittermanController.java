@@ -191,18 +191,22 @@ public class BlackLittermanController {
 			Date date = existingDate.getDate();
 			cal.setTime(date);
 	 		cal = trimTime(cal);
-
+	 		double totalValue=0.0;
 			for(Allocation allocation:allocationList){
 				if(allocation.getCostPrice()==0d || allocation.getIsActive().equals("N"))continue;
 				double latestPrice = portfolioRepository.getIndexPriceForGivenDate(allocation.getFund().getTicker(), cal.getTime());
 				ProfileResponse response = new ProfileResponse();
 				response.setClientId(Integer.valueOf(clientId));
-				response.setLabel(allocation.getFund().getTicker()+"("+(allocation.getType())+")");
+				response.setLabel(allocation.getFund().getTicker()+"("+(allocation.getType().substring(0,1))+")");
 				response.setValue(String.valueOf(latestPrice*allocation.getQuantity()));
+				totalValue += allocation.getQuantity()*allocation.getCostPrice();
 				responseList.add(response);
 			}
+			PortfolioResponse response = new PortfolioResponse();
+			response.setTotal(totalValue);
+			response.setData(responseList);
 			ObjectMapper responseMapper = new ObjectMapper();
-			str = responseMapper.writeValueAsString(responseList);
+			str = responseMapper.writeValueAsString(response);
 
 			
 			
