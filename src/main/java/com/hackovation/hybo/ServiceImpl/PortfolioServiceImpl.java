@@ -106,12 +106,12 @@ public class PortfolioServiceImpl implements PortfolioService{
 		System.out.println("\n");
 		System.out.println("###### Adding User View with balanced Confidence");
 		List<BigDecimal> weights = new ArrayList<>();
-		weights.add(new BigDecimal(16));
-		weights.add(new BigDecimal(16));
-		weights.add(new BigDecimal(10));
-		weights.add(new BigDecimal(5));
-		weights.add(new BigDecimal(16));
-		weights.add(new BigDecimal(25));
+		weights.add(new BigDecimal(0));
+		weights.add(new BigDecimal(0));
+		weights.add(new BigDecimal(0));
+		weights.add(new BigDecimal(0));
+		weights.add(new BigDecimal(0));
+		weights.add(new BigDecimal(0));
 		bl.addViewWithBalancedConfidence(weights, 0.26);
 		System.out.println("\n");
 		
@@ -125,7 +125,9 @@ public class PortfolioServiceImpl implements PortfolioService{
 		LinkedHashMap<String, Double> assetClassWiseWeight = new LinkedHashMap<>();
 		long i = 0;
 		for(String assetClass:indexToEtfMap.keySet()){
-			assetClassWiseWeight.put(assetClass, finalAssetWeights.doubleValue(i++));
+			if(finalAssetWeights.doubleValue(i)>0)
+				assetClassWiseWeight.put(assetClass, finalAssetWeights.doubleValue(i));
+			i++;
 		}
 		Map<String,Portfolio> map = buildPortfolio(profile,investment,assetClassWiseWeight,clientId,dummy,date);
 		System.out.println(" ###### Building Portfolio Done "+userId);
@@ -232,6 +234,7 @@ public class PortfolioServiceImpl implements PortfolioService{
 		List<Allocation> allocationList = new ArrayList<>();
 		Map<String, Portfolio> portfolioMap = new HashMap<>();
 		for(String assetClass:indexToEtfMap.keySet()){
+			if(!assetClassWiseWeight.containsKey(assetClass)) continue;
 			Allocation allocation = new Allocation();
 			String etf = indexToEtfMap.get(assetClass);
 			Fund fund  = fundRepository.findFund(etf);

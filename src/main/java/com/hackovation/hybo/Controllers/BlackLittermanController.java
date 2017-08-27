@@ -48,6 +48,7 @@ import com.hackovation.hybo.Util.HyboUtil;
 import com.hackovation.hybo.bean.Data;
 import com.hackovation.hybo.bean.DataVO;
 import com.hackovation.hybo.bean.EtfParent;
+import com.hackovation.hybo.bean.PortfolioResponse;
 import com.hackovation.hybo.bean.Price;
 import com.hackovation.hybo.bean.ProfileRequest;
 import com.hackovation.hybo.bean.ProfileResponse;
@@ -114,7 +115,7 @@ public class BlackLittermanController {
 			}
 			Map<String,Portfolio> dataMap = createPortfolio(investorProfile, profileRequest.getAmount(),date,userId);
 			
-			
+			double totalValue = 0.0;
 			List<ProfileResponse> responseList = new ArrayList<>();
 			Set<Entry<String,Portfolio>> entrySet = dataMap.entrySet();
 			Map<String,String> etfAssetClassMap = HyboUtil.ETFToAssetClassMap();
@@ -126,11 +127,15 @@ public class BlackLittermanController {
 					response.setClientId(Integer.valueOf(entry.getKey()));
 					response.setLabel(etfAssetClassMap.get(allocation.getFund().getTicker()));
 					response.setValue(String.valueOf(allocation.getPercentage()));
+					totalValue += allocation.getQuantity()*allocation.getCostPrice();
 					responseList.add(response);
 				}
 			}
+			PortfolioResponse response = new PortfolioResponse();
+			response.setTotal(totalValue);
+			response.setData(responseList);
 			ObjectMapper responseMapper = new ObjectMapper();
-			str = responseMapper.writeValueAsString(responseList);
+			str = responseMapper.writeValueAsString(response);
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -147,6 +152,7 @@ public class BlackLittermanController {
 		List<Portfolio>	portfolioList = portfolioRepository.getPortfolio(Integer.valueOf(clientId));
 		Portfolio portfolio = portfolioList.get(0);
 		List<ProfileResponse> responseList = new ArrayList<>();
+		double totalValue = 0.0;
 		Map<String,String> etfAssetClassMap = HyboUtil.ETFToAssetClassMap();
 		List<Allocation> allocationList = portfolio.getAllocations();
 		for(Allocation allocation:allocationList){
@@ -154,10 +160,14 @@ public class BlackLittermanController {
 			response.setClientId(clientId);
 			response.setLabel(etfAssetClassMap.get(allocation.getFund().getTicker()));
 			response.setValue(String.valueOf(allocation.getPercentage()));
+			totalValue += allocation.getQuantity()*allocation.getCostPrice();
 			responseList.add(response);
 		}
+		PortfolioResponse response = new PortfolioResponse();
+		response.setTotal(totalValue);
+		response.setData(responseList);
 		ObjectMapper responseMapper = new ObjectMapper();
-		str = responseMapper.writeValueAsString(responseList);
+		str = responseMapper.writeValueAsString(response);
 		return str;
 	}
 	public Map<String,Portfolio> createPortfolio(InvestorProfile profile,int investment,Date date,String userId) throws Exception{
@@ -187,7 +197,7 @@ public class BlackLittermanController {
 				double latestPrice = portfolioRepository.getIndexPriceForGivenDate(allocation.getFund().getTicker(), cal.getTime());
 				ProfileResponse response = new ProfileResponse();
 				response.setClientId(Integer.valueOf(clientId));
-				response.setLabel(allocation.getFund().getTicker());
+				response.setLabel(allocation.getFund().getTicker()+"("+(allocation.getType())+")");
 				response.setValue(String.valueOf(latestPrice*allocation.getQuantity()));
 				responseList.add(response);
 			}
