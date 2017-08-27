@@ -73,6 +73,8 @@ public class BlackLittermanController {
 	Rebalance rebalance;
 	
 	SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd");
+	NumberFormat numFormat = new DecimalFormat("#########.##");
+	SimpleDateFormat rebFor = new SimpleDateFormat("yyyy-MM");
 	
 	@RequestMapping(value="/validateUser", method=RequestMethod.GET,produces="application/json")
 	public @ResponseBody String validateUser(@RequestParam(name="userId")String userId) throws JsonProcessingException{
@@ -132,7 +134,7 @@ public class BlackLittermanController {
 				}
 			}
 			PortfolioResponse response = new PortfolioResponse();
-			response.setTotal(totalValue);
+			response.setTotal(Double.valueOf(numFormat.format(totalValue)));
 			response.setData(responseList);
 			ObjectMapper responseMapper = new ObjectMapper();
 			str = responseMapper.writeValueAsString(response);
@@ -164,7 +166,7 @@ public class BlackLittermanController {
 			responseList.add(response);
 		}
 		PortfolioResponse response = new PortfolioResponse();
-		response.setTotal(totalValue);
+		response.setTotal(Double.valueOf(numFormat.format(totalValue)));
 		response.setData(responseList);
 		ObjectMapper responseMapper = new ObjectMapper();
 		str = responseMapper.writeValueAsString(response);
@@ -205,7 +207,7 @@ public class BlackLittermanController {
 				responseList.add(response);
 			}
 			PortfolioResponse response = new PortfolioResponse();
-			response.setTotal(totalValue);
+			response.setTotal(Double.valueOf(numFormat.format(totalValue)));
 			response.setData(responseList);
 			System.out.println("Total value of portfolio for user "+userId+" as of date "+cal.getTime()+" is: "+totalValue);
 			ObjectMapper responseMapper = new ObjectMapper();
@@ -224,16 +226,17 @@ public class BlackLittermanController {
 		try{
 			int clientId = getClientId(userId);
 			
+			List<Portfolio> portfolioList = portfolioRepository.getPortfolio(clientId);
+			Portfolio portfolio = portfolioList.get(0);
 			Calendar systemDate = Calendar.getInstance();
 			Calendar cal = Calendar.getInstance();
-			CurrentDate existingDate = (CurrentDate)portfolioRepository.getEntity(1, CurrentDate.class);
-			Date date = existingDate.getDate();
+			Date date = portfolio.getTransactionDate();
 			cal.setTime(date);
 	 		cal = trimTime(cal);
 	 		double totalValue=0.0;
 	 		while(true){
-				List<Portfolio>	portfolioList = portfolioRepository.getPortfolioBeforeDate(Integer.valueOf(clientId),cal.getTime());
-				Portfolio portfolio = portfolioList.get(0);
+				portfolioList = portfolioRepository.getPortfolioBeforeDate(Integer.valueOf(clientId),cal.getTime());
+				portfolio = portfolioList.get(0);
 				List<Allocation> allocationList = portfolio.getAllocations();
 	 			totalValue = 0.0;
 				for(Allocation allocation:allocationList){
@@ -289,8 +292,6 @@ public class BlackLittermanController {
 	}
 	
 	private void processTLHData(List<TLHResponse> response,Map<String,List<Allocation>> filteredMap){
-		NumberFormat numFormat = new DecimalFormat("#########.##");
-		SimpleDateFormat rebFor = new SimpleDateFormat("yyyy-MM");
 		Set<String> keys = filteredMap.keySet();
 		TLHResponse responseList = new TLHResponse();
 		boolean processFurther = false;
