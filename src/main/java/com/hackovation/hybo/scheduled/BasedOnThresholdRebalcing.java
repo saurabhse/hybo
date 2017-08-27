@@ -184,7 +184,7 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 		persistList.addAll(newAllocationList);
 //		persistList.addAll(existingAllocationList);
 		updatePercLatest(persistList);
-		updatePercCurrent(persistList);
+//		updatePercCurrent(persistList);
  		persistPortfolio(portfolio, persistList);
 
 	}
@@ -394,17 +394,20 @@ public class BasedOnThresholdRebalcing implements Rebalance{
  		cal = trimTime(cal);
  		
 		double currentValueOfPortfolio = 0;
+		double currentEquityValueOfPortfolio = 0;
 		HashMap<String, Double> newPricesPerETF = new HashMap<>();
 		HashMap<String,Double> existPercMap = new HashMap<>();
 		for(Allocation existingAllocation:equityAllocationList){
 			int noOfETF = existingAllocation.getQuantity();
 			Map<String,String> paths = PathsAsPerAssetClass.getETFPaths();
+			existPercMap.put(existingAllocation.getFund().getTicker(), existingAllocation.getCostPrice()*existingAllocation.getQuantity());
 		
 			double latestPrice = portfolioRepository.getIndexPriceForGivenDate(existingAllocation.getFund().getTicker(), cal.getTime());
 			double cost = latestPrice;
 			currentValueOfPortfolio +=cost*existingAllocation.getQuantity();
+			currentEquityValueOfPortfolio += cost*existingAllocation.getQuantity();
 			newPricesPerETF.put(existingAllocation.getFund().getTicker(), latestPrice);
-			existPercMap.put(existingAllocation.getFund().getTicker(), existingAllocation.getPercentage());
+			
 		}
 		for(Allocation existingAllocation:bondAllocationList){
 			int noOfETF = existingAllocation.getQuantity();
@@ -414,8 +417,13 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 			double cost = latestPrice;
 			currentValueOfPortfolio +=cost*existingAllocation.getQuantity();
 			newPricesPerETF.put(existingAllocation.getFund().getTicker(), latestPrice);
-			existPercMap.put(existingAllocation.getFund().getTicker(), existingAllocation.getPercentage());
 		}
+		
+		Set<String> keys = existPercMap.keySet();
+		for(String key:keys){
+			existPercMap.put(key, 100*existPercMap.get(key)/currentEquityValueOfPortfolio);
+		}
+		
 		
 		double equityPortion = m*(currentValueOfPortfolio-floor);
 		equityPortion = Math.abs(equityPortion);
@@ -428,8 +436,10 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 			double perc = existPercMap.get(ticker);
 			double etfTodayPrice = newPricesPerETF.get(ticker);
 			double cost = (equityPortion*perc)/100;
+			System.out.println("before "+cost);
 			int number = Double.valueOf(cost/etfTodayPrice).intValue();
 			cost = etfTodayPrice;
+			System.out.println("after "+cost*number);
 			investment += cost*number;
 			newAllocation.setCostPrice(cost);
 			newAllocation.setPercentage(perc);
