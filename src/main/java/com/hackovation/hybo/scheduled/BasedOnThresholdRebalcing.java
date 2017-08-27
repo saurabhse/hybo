@@ -59,7 +59,7 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 	}
 	
 	
-	@Scheduled(cron="0 0/2 * * * *")
+	@Scheduled(cron="0 0/1 * * * *")
 	@Transactional
 	public void cron(){
 		System.out.println("Cron Running -> "+Calendar.getInstance().getTime());
