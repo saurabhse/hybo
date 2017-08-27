@@ -196,15 +196,18 @@ public class BlackLittermanController {
 				if(allocation.getCostPrice()==0d || allocation.getIsActive().equals("N"))continue;
 				double latestPrice = portfolioRepository.getIndexPriceForGivenDate(allocation.getFund().getTicker(), cal.getTime());
 				ProfileResponse response = new ProfileResponse();
+			//	System.out.println("Old Value "+allocation.getFund().getTicker()+","+allocation.getCostPrice());
 				response.setClientId(Integer.valueOf(clientId));
 				response.setLabel(allocation.getFund().getTicker()+"("+(allocation.getType().substring(0,1))+")");
 				response.setValue(String.valueOf(latestPrice*allocation.getQuantity()));
-				totalValue += allocation.getQuantity()*allocation.getCostPrice();
+			//	System.out.println("New Value "+allocation.getFund().getTicker()+","+latestPrice);
+				totalValue += allocation.getQuantity()*latestPrice;
 				responseList.add(response);
 			}
 			PortfolioResponse response = new PortfolioResponse();
 			response.setTotal(totalValue);
 			response.setData(responseList);
+			System.out.println("Total value of portfolio for user "+userId+" as of date "+cal.getTime()+" is: "+totalValue);
 			ObjectMapper responseMapper = new ObjectMapper();
 			str = responseMapper.writeValueAsString(response);
 
@@ -214,6 +217,45 @@ public class BlackLittermanController {
 			e.printStackTrace();
 		}
 		return str;
+	}
+	@RequestMapping(value="/showPortfolioProgress", method=RequestMethod.GET,produces = "application/json")
+	public void showPortfolioProgress(@RequestParam(name="userId") String userId){
+		String str = "No Data To Display";
+		try{
+			int clientId = getClientId(userId);
+			List<Portfolio>	portfolioList = portfolioRepository.getPortfolio(Integer.valueOf(clientId));
+			Portfolio portfolio = portfolioList.get(0);
+			
+			List<ProfileResponse> responseList = new ArrayList<>();
+			List<Allocation> allocationList = portfolio.getAllocations();
+			Calendar systemDate = Calendar.getInstance();
+			Calendar cal = Calendar.getInstance();
+			CurrentDate existingDate = (CurrentDate)portfolioRepository.getEntity(1, CurrentDate.class);
+			Date date = existingDate.getDate();
+			cal.setTime(date);
+	 		cal = trimTime(cal);
+	 		double totalValue=0.0;
+	 		while(true){
+				for(Allocation allocation:allocationList){
+					if(allocation.getCostPrice()==0d || allocation.getIsActive().equals("N"))continue;
+					double latestPrice = portfolioRepository.getIndexPriceForGivenDate(allocation.getFund().getTicker(), cal.getTime());
+					ProfileResponse response = new ProfileResponse();
+				//	System.out.println("Old Value "+allocation.getFund().getTicker()+","+allocation.getCostPrice());
+					response.setClientId(Integer.valueOf(clientId));
+					response.setLabel(allocation.getFund().getTicker()+"("+(allocation.getType().substring(0,1))+")");
+					response.setValue(String.valueOf(latestPrice*allocation.getQuantity()));
+				//	System.out.println("New Value "+allocation.getFund().getTicker()+","+latestPrice);
+					totalValue += allocation.getQuantity()*latestPrice;
+					responseList.add(response);
+				}
+				System.out.println("Total value of portfolio for user "+userId+" as of date "+cal.getTime()+" is: "+totalValue);
+				if(cal.getTime().after(systemDate.getTime()))break;
+				cal.add(Calendar.YEAR, 1);
+	 		}
+			
+		}catch(Exception e){
+			e.printStackTrace();
+		}
 	}
 	
 	@RequestMapping(value="/getTLHCid", method=RequestMethod.GET,produces = "application/json")
