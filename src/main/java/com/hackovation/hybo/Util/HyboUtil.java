@@ -49,6 +49,12 @@ public class HyboUtil {
 		allocationTypeMap.put("VBR",AllocationType.EQ);
 		allocationTypeMap.put("SHV",AllocationType.BOND);
 		allocationTypeMap.put("LQD",AllocationType.BOND);
+		allocationTypeMap.put("SCHB",AllocationType.EQ);
+		allocationTypeMap.put("IVE",AllocationType.EQ);
+		allocationTypeMap.put("IWS",AllocationType.EQ);
+		allocationTypeMap.put("IWN",AllocationType.EQ);
+		//allocationTypeMap.put("SHV",AllocationType.BOND);
+		allocationTypeMap.put("VCIT",AllocationType.BOND);
 		return allocationTypeMap;
 	}
 	public static Calendar trimTime(Calendar cal){
