@@ -64,7 +64,7 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 	public void cron(){
 		System.out.println("Cron Running -> "+Calendar.getInstance().getTime());
 		CurrentDate existingDate = (CurrentDate)portfolioRepository.getEntity(1, CurrentDate.class);
-		rebalance(existingDate.getDate());
+		//rebalance(existingDate.getDate());
 	}
 	@Override
 	@Transactional
@@ -392,6 +392,7 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 		}
 		
 		double equityPortion = m*(currentValueOfPortfolio-floor);
+		equityPortion = Math.abs(equityPortion);
 		Date currentDate = cal.getTime();
 		double investment = 0;
 		for(Allocation allocation : equityAllocationList){
@@ -402,6 +403,7 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 			double cost = (equityPortion*perc)/100;
 			int number = Double.valueOf(cost/etfTodayPrice).intValue();
 			cost = etfTodayPrice;
+			System.out.println("Aman "+ticker+" -- "+cost);
 			investment += cost*number;
 			newAllocation.setCostPrice(cost);
 			newAllocation.setPercentage(perc);
@@ -452,7 +454,7 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 	private int getFloorValue(RiskTolerance riskTolerance,double totalInvestment){
 		int floorValue = 0;
 		int perc = 0;
-		if(riskTolerance.equals(RiskTolerance.HIGH) || riskTolerance.equals(RiskTolerance.VERY_HIGH)) perc = 25;
+		if(riskTolerance.equals(RiskTolerance.HIGH) || riskTolerance.equals(RiskTolerance.VERY_HIGH)) perc = 75;
 		if(riskTolerance.equals(RiskTolerance.LOW) || riskTolerance.equals(RiskTolerance.VERY_LOW)) perc = 75;
 		if(riskTolerance.equals(RiskTolerance.MODERATE)) perc = 50;
 		floorValue = Double.valueOf((totalInvestment*perc)/100).intValue();
@@ -521,6 +523,7 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 	private void persistPortfolio(Portfolio portfolio,List<Allocation> newAllocationList){
 		List<Allocation> existingAllocations = portfolio.getAllocations();
 		for(Allocation allocation:existingAllocations)allocation.setIsActive("N");
+		for(Allocation allocation:newAllocationList)allocation.setPortfolio(portfolio);
 		existingAllocations.addAll(newAllocationList);
 		portfolio.setAllocations(existingAllocations);
 		portfolioRepository.persist(portfolio);

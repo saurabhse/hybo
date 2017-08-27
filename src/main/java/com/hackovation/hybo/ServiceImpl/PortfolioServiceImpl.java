@@ -32,6 +32,7 @@ import com.hack17.hybo.domain.InvestorProfile;
 import com.hack17.hybo.domain.MarketWeight;
 import com.hack17.hybo.domain.Portfolio;
 import com.hack17.hybo.domain.RiskTolerance;
+import com.hack17.hybo.domain.Transaction;
 import com.hack17.hybo.domain.UserClientMapping;
 import com.hack17.hybo.repository.FundRepository;
 import com.hack17.hybo.repository.PortfolioRepository;
@@ -295,6 +296,8 @@ public class PortfolioServiceImpl implements PortfolioService{
 		for(InvestorProfile obj:listInvestorProfiles)portfolioRepository.delete(obj);
 		List<UserClientMapping> listUsers =  portfolioRepository.getAllUsers();
 		for(UserClientMapping obj:listUsers)portfolioRepository.delete(obj);
+		List<Transaction> listOfTransactions =  portfolioRepository.getAllTransactions();
+		for(Transaction obj:listOfTransactions)portfolioRepository.delete(obj);
 	}
 
 	@Override
