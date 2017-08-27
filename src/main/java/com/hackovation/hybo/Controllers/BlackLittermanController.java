@@ -41,6 +41,7 @@ import com.hack17.hybo.domain.Allocation;
 import com.hack17.hybo.domain.CurrentDate;
 import com.hack17.hybo.domain.InvestorProfile;
 import com.hack17.hybo.domain.Portfolio;
+import com.hack17.hybo.domain.TLHRunPortfolioHistory;
 import com.hack17.hybo.domain.UserClientMapping;
 import com.hack17.hybo.repository.PortfolioRepository;
 import com.hackovation.hybo.CreatedBy;
@@ -258,7 +259,7 @@ public class BlackLittermanController {
 		}
 	}
 	
-	@RequestMapping(value="/getTLHCid", method=RequestMethod.GET,produces = "application/json")
+	/*@RequestMapping(value="/getTLHCid", method=RequestMethod.GET,produces = "application/json")
 	public @ResponseBody String getTLHListGivenUser(@RequestParam(name="userId") String userId) throws JsonProcessingException{
 		int clientId = getClientId(userId);
 		
@@ -284,6 +285,22 @@ public class BlackLittermanController {
 		processTLHData(response,filteredMap);
 		ObjectMapper responseMapper = new ObjectMapper();
 		String str = responseMapper.writeValueAsString(response);
+		System.out.println(str);
+		return str;
+	}*/
+	
+	@RequestMapping(value="/getTLHCid", method=RequestMethod.GET,produces = "application/json")
+	public @ResponseBody String getTLHListGivenUser(@RequestParam(name="userId") String userId) throws JsonProcessingException{
+		int clientId = getClientId(userId);
+		
+		List<Portfolio>	portfolioList = portfolioRepository.getPortfolio(Integer.valueOf(clientId));
+		Portfolio portfolio = portfolioList.get(0);
+		
+		List<TLHRunPortfolioHistory> tlhRunHistory = portfolioRepository.getTLHRunHistory(portfolio.getId());
+		
+		
+		ObjectMapper responseMapper = new ObjectMapper();
+		String str = responseMapper.writeValueAsString(tlhRunHistory);
 		System.out.println(str);
 		return str;
 	}
