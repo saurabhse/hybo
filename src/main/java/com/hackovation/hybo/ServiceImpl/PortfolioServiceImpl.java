@@ -106,12 +106,12 @@ public class PortfolioServiceImpl implements PortfolioService{
 		System.out.println("\n");
 		System.out.println("###### Adding User View with balanced Confidence");
 		List<BigDecimal> weights = new ArrayList<>();
-		weights.add(new BigDecimal(0));
-		weights.add(new BigDecimal(0));
-		weights.add(new BigDecimal(0));
-		weights.add(new BigDecimal(0));
-		weights.add(new BigDecimal(0));
-		weights.add(new BigDecimal(0));
+		weights.add(new BigDecimal(16));
+		weights.add(new BigDecimal(16));
+		weights.add(new BigDecimal(10));
+		weights.add(new BigDecimal(5));
+		weights.add(new BigDecimal(16));
+		weights.add(new BigDecimal(25));
 		bl.addViewWithBalancedConfidence(weights, 0.26);
 		System.out.println("\n");
 		

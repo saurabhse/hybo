@@ -140,6 +140,26 @@ public class BlackLittermanController {
 		return str;
 	}
 	
+	@RequestMapping(value="/getAllocation", method=RequestMethod.GET,produces = "application/json")
+	public @ResponseBody String getAllocation(@RequestParam(name="userId") String userId) throws JsonProcessingException{
+		int clientId = getClientId(userId);
+		String str = "No Data To Display";
+		List<Portfolio>	portfolioList = portfolioRepository.getPortfolio(Integer.valueOf(clientId));
+		Portfolio portfolio = portfolioList.get(0);
+		List<ProfileResponse> responseList = new ArrayList<>();
+		Map<String,String> etfAssetClassMap = HyboUtil.ETFToAssetClassMap();
+		List<Allocation> allocationList = portfolio.getAllocations();
+		for(Allocation allocation:allocationList){
+			ProfileResponse response = new ProfileResponse();
+			response.setClientId(clientId);
+			response.setLabel(etfAssetClassMap.get(allocation.getFund().getTicker()));
+			response.setValue(String.valueOf(allocation.getPercentage()));
+			responseList.add(response);
+		}
+		ObjectMapper responseMapper = new ObjectMapper();
+		str = responseMapper.writeValueAsString(responseList);
+		return str;
+	}
 	public Map<String,Portfolio> createPortfolio(InvestorProfile profile,int investment,Date date,String userId) throws Exception{
 		System.out.println("Started creating portfolio for client: "+userId+" For Date: "+date );
 		return portfolioService.buildPortfolio(profile,userId,false,date,investment);
