@@ -45,6 +45,7 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 	Map<String,String> indexToEtfMap;
 	Map<String,String> EtfToIndexMap;
 	final Map<Double,Double> assetClassTieredTable;
+	Calendar testCalendar = null;
 	double remainingAmountForBonds = 0.0;
 	
 	
@@ -63,13 +64,43 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 	@Scheduled(cron="0 0/1 * * * *")
 	@Transactional
 	public void cron(){
-		System.out.println("Cron Running -> "+Calendar.getInstance().getTime());
 		CurrentDate existingDate = (CurrentDate)portfolioRepository.getEntity(1, CurrentDate.class);
-		//rebalance(existingDate.getDate());
+		
+		System.out.println("Cron Running -> "+Calendar.getInstance().getTime());
+		rebalance(existingDate.getDate());
 	}
+	
+	public void test(){
+		CurrentDate existingDate = (CurrentDate)portfolioRepository.getEntity(1, CurrentDate.class);
+		testCalendar  = Calendar.getInstance();
+		testCalendar.setTime(existingDate.getDate());
+		Date systemDate = new Date();
+		Date date = new Date();
+		while(true){
+			testCalendar.add(Calendar.DATE, 45);
+			date = testCalendar.getTime();
+			System.out.println("Rebalancing Started ... "+date);
+			EtfToIndexMap = HyboUtil.getEtfToIndexMapping();
+			indexToEtfMap = HyboUtil.getIndexToEtfMapping();
+
+			List<Portfolio> listOfPortfolios =  portfolioRepository.getAllPortfoliosBeforeDate(date);
+			Map<Portfolio,List<Allocation>> groupWisePortfolio = groupByUserId(listOfPortfolios);
+			
+			Set<Entry<Portfolio,List<Allocation>>> entrySet = groupWisePortfolio.entrySet();
+			for(Entry<Portfolio,List<Allocation>> entry:entrySet){
+				Portfolio portfolio = entry.getKey();
+				if(!shouldTriggerRebalance(portfolio,date))continue;
+				else System.out.println(" Will do rebalancing");
+			}
+			System.out.println("\n\n\n\n\n");
+			if(date.after(systemDate))break;
+		}
+	}
+	
 	@Override
 	@Transactional
 	public void rebalance(Date date) {
+		
 		System.out.println("Rebalancing Started ... "+date);
 		EtfToIndexMap = HyboUtil.getEtfToIndexMapping();
 		indexToEtfMap = HyboUtil.getIndexToEtfMapping();
@@ -102,7 +133,7 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 		System.out.println("Level 1 Trigger Check.");
 		int horizonInMonths = portfolio.getInvestorProfile().getInvestmentHorizonInMonths();
 		Date activeAllocationDate = null;
-		List<Allocation> allocationList = portfolio.getAllocations();
+		List<Allocation> allocationList = getActiveAllocationList(portfolio.getAllocations());
 		for(Allocation allocation:allocationList){
 			if(allocation.getIsActive().equals("Y")){
 				activeAllocationDate = allocation.getTransactionDate();
@@ -124,11 +155,11 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 		
 		if(trigger){
 			System.out.println("Level 2 Trigger Check since Level 1 passed.");
-			HashMap<AllocationType,List<Allocation>> typeWiseAllocation = getAllocationBasedOnType(portfolio.getAllocations());
-			List<Allocation> eqAllocationList = typeWiseAllocation.get(AllocationType.EQ);
-			Map<String,Double> existingPercentageMap = getTypeAllocationPercentage(eqAllocationList);
-			double P = getValueOfP(portfolio, typeWiseAllocation);
-			List<Allocation> currentValueOfAllocations = listOfLatestValue(eqAllocationList,currentDate);
+			//System.out.println(" ------------- Printing Value and Percentage as per the last processing date --- ");
+			Map<String,Double> existingPercentageMap = getTypeAllocationPercentage(allocationList);
+			double P = 0.1;//getValueOfP(portfolio, allocationList);
+			//System.out.println(" ------------- Printing Value and Percentage as per the current date --- "+currentDate);
+			List<Allocation> currentValueOfAllocations = listOfLatestValue(allocationList,currentDate);
 			Map<String,Double> currentPercentageMap = getTypeAllocationPercentage(currentValueOfAllocations);
 			
 			for(String key:existingPercentageMap.keySet()){
@@ -136,31 +167,43 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 				double min = existingPerc-(P*existingPerc);
 				double max = existingPerc + (P*existingPerc);
 				double latestPer = currentPercentageMap.get(key);
+				//System.out.println(key+","+existingPerc+","+latestPer);
 				if(latestPer>=min && latestPer<=max){
 					trigger = false;
 				}else{
+					System.out.println(" -------------------------------------- Triggering rebalancing because of :"+key +" , "+currentDate);
+					System.out.println(existingPerc+" ---- "+latestPer);
 					trigger = true;
 					break;
 				}
 				
 			}
 			if(!trigger)
-				System.out.println("Second level check for rebalancing failed!");
+				System.out.println(" ---------  Second level check for rebalancing failed!");
 			else
-				System.out.println("Second level check for rebalancing PASSED  !!! !");
+				System.out.println("-------------- Second level check for rebalancing PASSED  !!! !");
 		}
 		return trigger;
 	}
 	
+	public List<Allocation> getActiveAllocationList(List<Allocation> existinAllocationList){
+		List<Allocation> activeAllocations = new ArrayList<>();
+		for(Allocation allocation: existinAllocationList){
+			if(allocation.getIsActive().equals("Y"))activeAllocations.add(allocation);
+		}
+		return activeAllocations;
+	}
 	private Map<String,Double> getTypeAllocationPercentage(List<Allocation> allocation){
 		Map<String,Double> allocationPercentage= new HashMap<>();
 		double totalValue = 0.0;
-		for(Allocation object:allocation)
+		for(Allocation object:allocation){
 			totalValue += (object.getQuantity()*object.getCostPrice());
-		
+			//System.out.println(object.getFund().getTicker()+" -> "+object.getQuantity()+", "+object.getCostPrice()+","+(object.getQuantity()*object.getCostPrice()));
+		}
 		for(Allocation object:allocation){
 			double value = object.getCostPrice()*object.getQuantity();
 			allocationPercentage.put(object.getFund().getTicker(), value/totalValue*100);
+			//System.out.println(object.getFund().getTicker()+" % -> "+value/totalValue*100);
 		}
 		return allocationPercentage;
 	}
@@ -284,7 +327,7 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 	
 	public HashMap<AllocationType, List<Allocation>> getAllocationBasedOnType(List<Allocation> allocationList){
 		HashMap<AllocationType,List<Allocation>> map = new HashMap<>();
-		List<Allocation> activeAllocations = new ArrayList<>();
+		List<Allocation> activeAllocations = getActiveAllocationList(allocationList);
 		for(Allocation allocation:allocationList){
 			if(allocation.getIsActive().equals("Y"))
 				activeAllocations.add(allocation);
