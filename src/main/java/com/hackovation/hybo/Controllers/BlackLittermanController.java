@@ -222,46 +222,7 @@ public class BlackLittermanController {
 		}
 		return str;
 	}
-	@RequestMapping(value="/showPortfolioProgress", method=RequestMethod.GET,produces = "application/json")
-	public void showPortfolioProgress(@RequestParam(name="userId") String userId){
-		String str = "No Data To Display";
-		try{
-			int clientId = getClientId(userId);
-			
-			List<Portfolio> portfolioList = portfolioRepository.getPortfolio(clientId);
-			Portfolio portfolio = portfolioList.get(0);
-			Calendar systemDate = Calendar.getInstance();
-			Calendar cal = Calendar.getInstance();
-			Date date = portfolio.getTransactionDate();
-			cal.setTime(date);
-	 		cal = trimTime(cal);
-	 		double totalValue=0.0;
-	 		while(true){
-				portfolioList = portfolioRepository.getPortfolioBeforeDate(Integer.valueOf(clientId),cal.getTime());
-				portfolio = portfolioList.get(0);
-				List<Allocation> allocationList = portfolio.getAllocations();
-	 			totalValue = 0.0;
-				for(Allocation allocation:allocationList){
-					if(allocation.getCostPrice()==0d || allocation.getIsActive().equals("N"))continue;
-					double latestPrice = portfolioRepository.getIndexPriceForGivenDate(allocation.getFund().getTicker(), cal.getTime());
-					ProfileResponse response = new ProfileResponse();
-				//	System.out.println("Old Value "+allocation.getFund().getTicker()+","+allocation.getCostPrice());
-					response.setClientId(Integer.valueOf(clientId));
-					response.setLabel(allocation.getFund().getTicker()+"("+(allocation.getType().substring(0,1))+")");
-					response.setValue(String.valueOf(latestPrice*allocation.getQuantity()));
-					//System.out.println("	Data "+allocation.getFund().getTicker()+", Quantity: "+allocation.getQuantity()+
-						//	", old price : "+allocation.getCostPrice()+", Latest price: "+latestPrice+", Value: "+allocation.getQuantity()*latestPrice);
-					totalValue += allocation.getQuantity()*latestPrice;
-				}
-				System.out.println("Total value of portfolio for user "+userId+" as of date "+cal.getTime()+" is: "+totalValue);
-				cal.add(Calendar.MONTH, 1);
-				if(cal.getTime().after(systemDate.getTime()))break;
-	 		}
-			
-		}catch(Exception e){
-			e.printStackTrace();
-		}
-	}
+
 	
 	/*@RequestMapping(value="/getTLHCid", method=RequestMethod.GET,produces = "application/json")
 	public @ResponseBody String getTLHListGivenUser(@RequestParam(name="userId") String userId) throws JsonProcessingException{

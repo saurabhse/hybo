@@ -257,11 +257,12 @@ public class PortfolioServiceImpl implements PortfolioService{
  			allocation.setIsActive("Y");
  			fund.setTicker(etf);
  			allocation.setFund(fund);
- 			allocationList.add(allocation);
  			allocation.setRebalanceDayPrice(perIndexCost);
  			allocation.setRebalanceDayPerc(assetClassWiseWeight.get(assetClass)*100);
  			allocation.setRebalanceDayQuantity(quantity);
  			allocation.setCreatedBy(CreatedBy.PORT.name());
+ 			allocation.setPortfolio(portfolio);
+ 			allocationList.add(allocation);
 		}
 		portfolio.setAllocations(allocationList);
 		

@@ -67,7 +67,7 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 		CurrentDate existingDate = (CurrentDate)portfolioRepository.getEntity(1, CurrentDate.class);
 		
 		System.out.println("Cron Running -> "+Calendar.getInstance().getTime());
-		rebalance(existingDate.getDate());
+		//rebalance(existingDate.getDate());
 	}
 	
 	public void test(){
@@ -328,10 +328,7 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 	public HashMap<AllocationType, List<Allocation>> getAllocationBasedOnType(List<Allocation> allocationList){
 		HashMap<AllocationType,List<Allocation>> map = new HashMap<>();
 		List<Allocation> activeAllocations = getActiveAllocationList(allocationList);
-		for(Allocation allocation:allocationList){
-			if(allocation.getIsActive().equals("Y"))
-				activeAllocations.add(allocation);
-		}
+		
 		
 		List<Allocation> EQList = activeAllocations.stream().filter(a->a.getType().equals(AllocationType.EQ.name())).collect(Collectors.toList());
 		List<Allocation> BONDList = activeAllocations.stream().filter(a->a.getType().equals(AllocationType.BOND.name())).collect(Collectors.toList());
