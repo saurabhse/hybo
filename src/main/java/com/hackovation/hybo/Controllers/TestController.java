@@ -5,8 +5,10 @@ import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
+import java.util.Set;
 
 import javax.transaction.Transactional;
 
@@ -21,7 +23,9 @@ import org.springframework.web.bind.annotation.RestController;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hack17.hybo.domain.Allocation;
+import com.hack17.hybo.domain.One;
 import com.hack17.hybo.domain.Portfolio;
+import com.hack17.hybo.domain.Two;
 import com.hack17.hybo.domain.UserClientMapping;
 import com.hack17.hybo.repository.PortfolioRepository;
 import com.hackovation.hybo.bean.ProfileResponse;
@@ -45,6 +49,22 @@ public class TestController {
 	SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd");
 	NumberFormat numFormat = new DecimalFormat("#########.##");
 	SimpleDateFormat rebFor = new SimpleDateFormat("yyyy-MM");	
+	
+	@RequestMapping(value="/test", method=RequestMethod.GET)
+	@Transactional
+	public void test(){
+		One one= (One)portfolioRepository.getEntity(1, One.class);
+		
+		Set<Two> twoSet = new HashSet<>();
+		Two twoOne = new Two();
+		twoOne.setId(99);
+		twoOne.setName("aman");
+		twoSet.add(twoOne);
+		one.setSetOfTwo(twoSet);
+		portfolioRepository.merge(one);
+	}
+	
+	
 	@RequestMapping(value="/rebalanceTest", method=RequestMethod.GET)
 	public void testRebalance(){
 		rebalance.test();

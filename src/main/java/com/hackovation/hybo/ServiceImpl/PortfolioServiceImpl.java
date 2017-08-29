@@ -105,13 +105,7 @@ public class PortfolioServiceImpl implements PortfolioService{
 		BlackLittermanModel bl  = new BlackLittermanModel(marketEquilibrium, marketWeightMatrix);
 		System.out.println("\n");
 		System.out.println("###### Adding User View with balanced Confidence");
-		List<BigDecimal> weights = new ArrayList<>();
-		weights.add(new BigDecimal(0));
-		weights.add(new BigDecimal(0));
-		weights.add(new BigDecimal(0));
-		weights.add(new BigDecimal(0));
-		weights.add(new BigDecimal(0));
-		weights.add(new BigDecimal(0));
+		List<BigDecimal> weights = getMarketWeight(profile);
 		bl.addViewWithBalancedConfidence(weights, 0.26);
 		System.out.println("\n");
 		
@@ -135,6 +129,37 @@ public class PortfolioServiceImpl implements PortfolioService{
 		return map;		
 	}
 
+	
+	private List<BigDecimal> getMarketWeight(InvestorProfile profile){
+		List<BigDecimal> weights = new ArrayList<>();
+		if(profile.getRiskTolerance().equals(RiskTolerance.HIGH)){
+			weights.add(new BigDecimal(0.9));
+			weights.add(new BigDecimal(0.9));
+			weights.add(new BigDecimal(0.9));
+			weights.add(new BigDecimal(0.9));
+			weights.add(new BigDecimal(0));
+			weights.add(new BigDecimal(0));
+		}
+		else if(profile.getRiskTolerance().equals(RiskTolerance.MODERATE)){
+				weights.add(new BigDecimal(0));
+				weights.add(new BigDecimal(0));
+				weights.add(new BigDecimal(0));
+				weights.add(new BigDecimal(0));
+				weights.add(new BigDecimal(0));
+				weights.add(new BigDecimal(0));
+		}
+		else if(profile.getRiskTolerance().equals(RiskTolerance.LOW)){
+					weights.add(new BigDecimal(1));
+					weights.add(new BigDecimal(0));
+					weights.add(new BigDecimal(0));
+					weights.add(new BigDecimal(0));
+					weights.add(new BigDecimal(0));
+					weights.add(new BigDecimal(29.9));
+		}
+			
+		return weights;
+	}
+	
 	private LinkedHashMap<String,String> getassetETFMap(){
 		LinkedHashMap<String,String> assetETFMap = new LinkedHashMap<>();
 		assetETFMap.put("CRSPTM1","VTI");
@@ -245,7 +270,7 @@ public class PortfolioServiceImpl implements PortfolioService{
 			double perIndexCost = portfolioRepository.getIndexPriceForGivenDate(indexToEtfMap.get(assetClass), cal.getTime());
  			NumberFormat nf = NumberFormat.getInstance();
  			int quantity = Double.valueOf((cost/perIndexCost)).intValue();
- 			System.out.println("Asset Class: "+assetClass+" Weight: "+assetClassWiseWeight.get(assetClass)+" Cost: "+cost +" PerIndexCost: "+perIndexCost+" Quantity:"+quantity);
+ 			System.out.println("Asset Class: "+assetClass+" Weight: "+assetClassWiseWeight.get(assetClass)+" Value: "+cost +" PerIndexCost: "+perIndexCost+" Quantity:"+quantity);
  			if(quantity==0)continue;
  			allocation.setQuantity(Double.valueOf((cost/perIndexCost)).intValue());
  			allocation.setCostPrice(perIndexCost);

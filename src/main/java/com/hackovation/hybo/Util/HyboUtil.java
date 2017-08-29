@@ -3,6 +3,7 @@ package com.hackovation.hybo.Util;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 import com.hack17.hybo.domain.UserClientMapping;
@@ -10,7 +11,7 @@ import com.hackovation.hybo.AllocationType;
 
 public class HyboUtil {
 	public static Map<String,String> getIndexToEtfMapping(){
-		Map<String,String> map = new HashMap<>();
+		Map<String,String> map = new LinkedHashMap<>();
 		map.put("CRSPTM1", "VTI");
 		map.put("CRSPLC1", "VTV");
 		map.put("CRSPML1", "VOE");
@@ -21,7 +22,7 @@ public class HyboUtil {
 	}
 
 	public static Map<String,String> getEtfToIndexMapping(){
-		Map<String,String> map = new HashMap<>();
+		Map<String,String> map = new LinkedHashMap<>();
 		map.put("VTI","CRSPTM1");
 		map.put("VTV","CRSPLC1");
 		map.put("VOE","CRSPML1");
@@ -32,7 +33,7 @@ public class HyboUtil {
 	}
 	
 	public static Map<String,String> ETFToAssetClassMap(){
-		Map<String,String> map = new HashMap<>();
+		Map<String,String> map = new LinkedHashMap<>();
 		map.put("VTI","US Total Stock Market");
 		map.put("VTV","US Large Cap");
 		map.put("VOE","US Mid Cap");
@@ -42,7 +43,7 @@ public class HyboUtil {
 		return map;
 	}
 	public static Map<String,AllocationType> getAllocationTypeMap(){
-		Map<String,AllocationType> allocationTypeMap = new HashMap<>();
+		Map<String,AllocationType> allocationTypeMap = new LinkedHashMap<>();
 		allocationTypeMap.put("VTI",AllocationType.EQ);
 		allocationTypeMap.put("VTV",AllocationType.EQ);
 		allocationTypeMap.put("VOE",AllocationType.EQ);

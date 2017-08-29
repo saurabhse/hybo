@@ -1,6 +1,8 @@
 package com.hackovation.hybo.scheduled;
 
 
+import static org.mockito.Matchers.eq;
+
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
@@ -66,7 +68,7 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 	public void cron(){
 		CurrentDate existingDate = (CurrentDate)portfolioRepository.getEntity(1, CurrentDate.class);
 		
-		System.out.println("Cron Running -> "+Calendar.getInstance().getTime());
+		//System.out.println("Cron Running -> "+Calendar.getInstance().getTime());
 		//rebalance(existingDate.getDate());
 	}
 	
@@ -305,7 +307,7 @@ public class BasedOnThresholdRebalcing implements Rebalance{
  		double totalOfBondAllocation = 0.0;
  		for(Allocation existingAllocation:bondAllocationList)
  			totalOfBondAllocation += existingAllocation.getCostPrice()*existingAllocation.getQuantity();
- 		
+ 		double investment =0.0;
  		for(Allocation existingAllocation:bondAllocationList){
 			Allocation newAllocation = copyAllocationInNewObject(existingAllocation, currentDate);
 			double allocationPrice = newAllocation.getCostPrice()*newAllocation.getQuantity();
@@ -318,9 +320,10 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 			int count = new Double(amountToAssign/latestPrice).intValue();
 			newAllocation.setQuantity(count);
 			newAllocation.setCostPrice(latestPrice);
-			
+			investment += newAllocation.getCostPrice()*newAllocation.getQuantity();
 			updatedBondAllocationList.add(newAllocation);
 		}
+		System.out.println(" Final Allocation in bond : "+investment);
  		return updatedAllocationList;
  		//persistPortfolio(portfolio, updatedAllocationList);
 	}
@@ -471,13 +474,23 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 		double totalInvestment = 0.0;
 		RiskTolerance riskTolerance = portfolio.getInvestorProfile().getRiskTolerance();
 		List<Allocation> newAllocationList = new ArrayList<>();
+		double equityValueOld = 0.0;
+		double bondValueOld=0.0;
 		if(equityAllocationList != null && equityAllocationList.size()>0)
 			totalInvestment+= equityAllocationList.get(0).getInvestment();
+		for(Allocation obj:equityAllocationList)
+			equityValueOld += (obj.getCostPrice()*obj.getQuantity());
+		for(Allocation obj:bondAllocationList)
+			bondValueOld += (obj.getCostPrice()*obj.getQuantity());
+
+		
 		
 		/*if(bondAllocationList != null && bondAllocationList.size()>0)
 			totalInvestment+= bondAllocationList.get(0).getInvestment();
 		*/
-		
+		System.out.println("Equity value old: "+equityValueOld+"\n");
+		System.out.println("Bond value old: "+bondValueOld+"\n");
+	
 		final int m = 3;
 		Calendar cal = Calendar.getInstance();
  		cal.setTime(date);
@@ -499,6 +512,7 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 			newPricesPerETF.put(existingAllocation.getFund().getTicker(), latestPrice);
 			
 		}
+		System.out.println("Equity value in current portfolio : "+currentEquityValueOfPortfolio+"\n");
 		for(Allocation existingAllocation:bondAllocationList){
 			int noOfETF = existingAllocation.getQuantity();
 			Map<String,String> paths = PathsAsPerAssetClass.getETFPaths();
@@ -508,18 +522,24 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 			currentValueOfPortfolio +=cost*existingAllocation.getQuantity();
 			newPricesPerETF.put(existingAllocation.getFund().getTicker(), latestPrice);
 		}
-		
 		Set<String> keys = existPercMap.keySet();
 		for(String key:keys){
 			existPercMap.put(key, 100*existPercMap.get(key)/currentEquityValueOfPortfolio);
 		}
 		
-		System.out.println(" Value of portfolio while running rebalancing "+currentValueOfPortfolio);
+		//System.out.println(" Value of portfolio while running rebalancing "+currentValueOfPortfolio);
 		
 		final int floor = getFloorValue(riskTolerance, currentValueOfPortfolio);
 		double equityPortion = m*(currentValueOfPortfolio-floor);
+		
+		System.out.println("double equityPortion = m*(currentValueOfPortfolio-floor \n");
+		System.out.println("m="+m+", current value of portfolio: "+currentValueOfPortfolio+", floor value: "+floor +"\n");
+		
 		equityPortion = Math.abs(equityPortion);
 		remainingAmountForBonds = currentValueOfPortfolio-equityPortion;
+		
+		System.out.println("equity portion :"+equityPortion+"\n");
+		System.out.println("bond portion :"+remainingAmountForBonds+"\n");
 		Date currentDate = cal.getTime();
 		double investment = 0;
 		for(Allocation allocation : equityAllocationList){
@@ -540,6 +560,7 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 			newAllocationList.add(newAllocation);
 			log(allocation, newAllocation, currentDate);
 		}
+		System.out.println(" Final Allocation in equity : "+investment);
 		return newAllocationList;
 	}
 	
