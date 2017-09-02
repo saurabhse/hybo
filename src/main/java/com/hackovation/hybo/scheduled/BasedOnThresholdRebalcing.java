@@ -1,7 +1,6 @@
 package com.hackovation.hybo.scheduled;
 
 
-import static org.mockito.Matchers.eq;
 
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -161,6 +160,7 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 			Map<String,Double> existingPercentageMap = getTypeAllocationPercentage(allocationList);
 			double P = 0.1;//getValueOfP(portfolio, allocationList);
 			//System.out.println(" ------------- Printing Value and Percentage as per the current date --- "+currentDate);
+
 			List<Allocation> currentValueOfAllocations = listOfLatestValue(allocationList,currentDate);
 			Map<String,Double> currentPercentageMap = getTypeAllocationPercentage(currentValueOfAllocations);
 			
@@ -374,12 +374,16 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 			InvestorProfile profile = portfolio.getInvestorProfile();
 			RiskTolerance riskTolerance = profile.getRiskTolerance();
 			
+			if(profile.getInvestmentHorizonInMonths()<=36)
+			{
+				System.out.println("Investment Horizon is very less. Therefore no need of rebalancing. "+profile.getInvestmentHorizonInMonths());
+			}
 			if(riskTolerance.equals(RiskTolerance.VERY_HIGH) && marketStatus.isGoingUp){
 				System.out.println(" Not rebalancing because RiskToleranc is High and Market is going up.");
 			}
 			else if(riskTolerance.equals(RiskTolerance.MODERATE) && marketStatus.isFluctuating){
-				System.out.println(" Tiered Rebalncing because RiskToleranc is Moderate/Mediun and Market is fluctuating.");
-				newAllocationList = tieredBasedRebalancing(portfolio, equityAllocationList,date);
+				System.out.println(" Tiered Rebalncing because RiskToleranc is Moderate/Medium and Market is fluctuating.");
+				newAllocationList = tieredBasedRebalancing(portfolio, equityAllocationList,bondAllocationList,date);
 			}
 			else if(riskTolerance.equals(RiskTolerance.HIGH) && (marketStatus.isGoingDown || marketStatus.isGoingUp)){
 				System.out.println(" Formula Based Rebalncing because RiskToleranc is High and Market is not fluctuating.");
@@ -393,7 +397,7 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 		return newAllocationList;
 	}
 	
-	private List<Allocation> tieredBasedRebalancing(Portfolio portfolio, List<Allocation> equityAllocationList,Date date){
+	private List<Allocation> tieredBasedRebalancing(Portfolio portfolio, List<Allocation> equityAllocationList,List<Allocation> bondAllocationList,Date date){
 		HashMap<String,Double> existPercMap = new HashMap<>();
 		HashMap<String, Double> newPercMap = new HashMap<>();
 		HashMap<String, Double> newPricesPerETF = new HashMap<>();
@@ -402,6 +406,11 @@ public class BasedOnThresholdRebalcing implements Rebalance{
  		cal.setTime(date);
  		cal = trimTime(cal);
  		
+		for(Allocation existingAllocation:bondAllocationList){
+			int noOfETF = existingAllocation.getQuantity();
+			double cost = existingAllocation.getCostPrice();
+			remainingAmountForBonds +=cost*existingAllocation.getQuantity();
+		}
 		for(Allocation existingAllocation:equityAllocationList){
 			int noOfETF = existingAllocation.getQuantity();
 			Map<String,String> paths = PathsAsPerAssetClass.getETFPaths();
@@ -429,6 +438,8 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 				newInvestment+=newAllocation.getInvestment();
 			}
 			else if (adjustment < 0 ){
+				
+				
 				double newPer =existingPerc-Math.abs(adjustment);
 				double averagePerc = (existingPerc+newPer)/2;
 				double cost = (totalValue*averagePerc)/100;
@@ -443,6 +454,9 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 				log(allocation, newAllocation, currentDate);
 				newAllocation.setRebalanceDayQuantity(allocation.getQuantity());
 				newAllocation.setRebalanceDayPrice(allocation.getCostPrice());
+				double oldPrice = allocation.getCostPrice()*allocation.getQuantity();
+				double newPrice = newAllocation.getCostPrice()*newAllocation.getQuantity();
+				remainingAmountForBonds += (oldPrice-newPrice);
 			}
 			else if (adjustment > 0 ){
 				double newPer =existingPerc+Math.abs(adjustment);
@@ -459,6 +473,9 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 				newAllocation.setRebalanceDayQuantity(allocation.getQuantity());
 				newAllocation.setRebalanceDayPrice(allocation.getCostPrice());
 				log(allocation, newAllocation, currentDate);
+				double oldPrice = allocation.getCostPrice()*allocation.getQuantity();
+				double newPrice = newAllocation.getCostPrice()*newAllocation.getQuantity();
+				remainingAmountForBonds += (newPrice-oldPrice);
 			}
 			
 		}
@@ -485,11 +502,8 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 
 		
 		
-		/*if(bondAllocationList != null && bondAllocationList.size()>0)
-			totalInvestment+= bondAllocationList.get(0).getInvestment();
-		*/
-		System.out.println("Equity value old: "+equityValueOld+"\n");
-		System.out.println("Bond value old: "+bondValueOld+"\n");
+		System.out.println("Total Equity value old: "+equityValueOld+"\n");
+		System.out.println("Total Bond value old: "+bondValueOld+"\n");
 	
 		final int m = 3;
 		Calendar cal = Calendar.getInstance();
@@ -512,7 +526,7 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 			newPricesPerETF.put(existingAllocation.getFund().getTicker(), latestPrice);
 			
 		}
-		System.out.println("Equity value in current portfolio : "+currentEquityValueOfPortfolio+"\n");
+		System.out.println("Total Equity value in current portfolio : "+currentEquityValueOfPortfolio+"\n");
 		for(Allocation existingAllocation:bondAllocationList){
 			int noOfETF = existingAllocation.getQuantity();
 			Map<String,String> paths = PathsAsPerAssetClass.getETFPaths();
@@ -564,23 +578,7 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 		return newAllocationList;
 	}
 	
-	private void updatePercCurrent(List<Allocation> allocationList){
-		double portfolioValue = 0.0;
-		for(Allocation allocation:allocationList){
-			portfolioValue += allocation.getRebalanceDayPrice()*allocation.getRebalanceDayQuantity();
-		}
-		for(Allocation allocation:allocationList){
-			double value = allocation.getRebalanceDayPrice()*allocation.getRebalanceDayQuantity();
-			try{
-				allocation.setRebalanceDayPerc(value*100/portfolioValue);
-			}
-			catch(Exception e){
-				e.printStackTrace();
-				allocation.setRebalanceDayPerc(0);
-			}
-		}
-		
-	}
+	
 	private void updatePercLatest(List<Allocation> allocationList){
 		double portfolioValue = 0.0;
 		for(Allocation allocation:allocationList){

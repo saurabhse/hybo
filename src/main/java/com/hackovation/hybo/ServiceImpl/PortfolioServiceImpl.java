@@ -141,20 +141,22 @@ public class PortfolioServiceImpl implements PortfolioService{
 			weights.add(new BigDecimal(0));
 		}
 		else if(profile.getRiskTolerance().equals(RiskTolerance.MODERATE)){
-				weights.add(new BigDecimal(0));
-				weights.add(new BigDecimal(0));
-				weights.add(new BigDecimal(0));
-				weights.add(new BigDecimal(0));
+				
+			
+				weights.add(new BigDecimal(0.9));
+				weights.add(new BigDecimal(0.9));
+				weights.add(new BigDecimal(0.9));
+				weights.add(new BigDecimal(0.9));
 				weights.add(new BigDecimal(0));
 				weights.add(new BigDecimal(0));
 		}
 		else if(profile.getRiskTolerance().equals(RiskTolerance.LOW)){
-					weights.add(new BigDecimal(1));
-					weights.add(new BigDecimal(0));
-					weights.add(new BigDecimal(0));
-					weights.add(new BigDecimal(0));
-					weights.add(new BigDecimal(0));
-					weights.add(new BigDecimal(29.9));
+				weights.add(new BigDecimal(0));
+				weights.add(new BigDecimal(0));
+				weights.add(new BigDecimal(0));
+				weights.add(new BigDecimal(0));
+				weights.add(new BigDecimal(0));
+				weights.add(new BigDecimal(0));
 		}
 			
 		return weights;

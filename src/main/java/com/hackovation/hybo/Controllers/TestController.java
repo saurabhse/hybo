@@ -5,8 +5,10 @@ import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 
@@ -153,6 +155,90 @@ public class TestController {
 				portfolioRepository.persist(index);
 			}
 		}
+	}
+	
+	@RequestMapping(value="/reduce30", method=RequestMethod.GET)
+	@Transactional
+	public void reduce30Percent(){
+		List<IndexPrice> indexPriceList= portfolioRepository.getAllIndexPrice();
+		Map<String,Double> reducedPriceMap = new HashMap<>();
+		reducedPriceMap.put("CRSPLC1",988.91);
+		reducedPriceMap.put("CRSPMI1",1000.18);
+		reducedPriceMap.put("CRSPSC1",985.0);
+		reducedPriceMap.put("CRSPTM1",982.01);
+		reducedPriceMap.put("IEMG",34.33);
+		reducedPriceMap.put("IVE",60.54);
+		reducedPriceMap.put("IWN",70.29);
+		reducedPriceMap.put("IWS",47.73);
+		reducedPriceMap.put("LQD",81.98);
+		reducedPriceMap.put("MUB",74.97);
+		reducedPriceMap.put("SCHB",31.86);
+		reducedPriceMap.put("SCHD",25.7);
+		reducedPriceMap.put("SCHF",21.98);
+		reducedPriceMap.put("SCHP",37.86);
+		reducedPriceMap.put("SHV",77.19);
+		reducedPriceMap.put("TFI",32.58);
+		reducedPriceMap.put("VBR",69.92);
+		reducedPriceMap.put("VCIT",59.42);
+		reducedPriceMap.put("VDE",90.0);
+		reducedPriceMap.put("VEA",28.82);
+		reducedPriceMap.put("VIG",52.44);
+		reducedPriceMap.put("VOE",57.55);
+		reducedPriceMap.put("VTI",67.96);
+		reducedPriceMap.put("VTIP",34.54);
+		reducedPriceMap.put("VTV",54.38);
+		reducedPriceMap.put("VWO",28.41);
+		reducedPriceMap.put("XLE",62.48);
+		for(IndexPrice index:indexPriceList){
+			Calendar cal = Calendar.getInstance();
+			cal.setTime(index.getDate());
+			if(cal.get(Calendar.YEAR)==2014 && cal.get(Calendar.MONTH)==Calendar.OCTOBER && cal.get(Calendar.DATE)==06){
+				index.setPrice(reducedPriceMap.get(index.getIndex()));
+				portfolioRepository.persist(index);
+			}
+		}
+	}
+	@RequestMapping(value="/reset", method=RequestMethod.GET)
+	@Transactional
+	public void reset(){
+		List<IndexPrice> indexPriceList= portfolioRepository.getAllIndexPrice();
+		Map<String,Double> reducedPriceMap = new HashMap<>();
+		reducedPriceMap.put("CRSPLC1",1412.73);
+		reducedPriceMap.put("CRSPMI1",1428.83);
+		reducedPriceMap.put("CRSPSC1",1407.14);
+		reducedPriceMap.put("CRSPTM1",1402.87);
+		reducedPriceMap.put("IEMG",49.04);
+		reducedPriceMap.put("IVE",86.48);
+		reducedPriceMap.put("IWN",100.42);
+		reducedPriceMap.put("IWS",68.19);
+		reducedPriceMap.put("LQD",117.11);
+		reducedPriceMap.put("MUB",107.1);
+		reducedPriceMap.put("SCHB",45.52);
+		reducedPriceMap.put("SCHD",36.71);
+		reducedPriceMap.put("SCHF",31.4);
+		reducedPriceMap.put("SCHP",54.08);
+		reducedPriceMap.put("SHV",110.27);
+		reducedPriceMap.put("TFI",46.54);
+		reducedPriceMap.put("VBR",99.88);
+		reducedPriceMap.put("VCIT",84.88);
+		reducedPriceMap.put("VDE",128.57);
+		reducedPriceMap.put("VEA",41.17);
+		reducedPriceMap.put("VIG",74.92);
+		reducedPriceMap.put("VOE",82.21);
+		reducedPriceMap.put("VTI",97.09);
+		reducedPriceMap.put("VTIP",49.34);
+		reducedPriceMap.put("VTV",77.68);
+		reducedPriceMap.put("VWO",40.58);
+		reducedPriceMap.put("XLE",89.25);		
+		for(IndexPrice index:indexPriceList){
+			Calendar cal = Calendar.getInstance();
+			cal.setTime(index.getDate());
+			if(cal.get(Calendar.YEAR)==2014 && cal.get(Calendar.MONTH)==Calendar.OCTOBER && cal.get(Calendar.DATE)==05){
+				index.setPrice(reducedPriceMap.get(index.getIndex()));
+				portfolioRepository.persist(index);
+			}
+		}
+		
 	}
 	
 }
