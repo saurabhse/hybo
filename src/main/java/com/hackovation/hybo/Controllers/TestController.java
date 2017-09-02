@@ -23,6 +23,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hack17.hybo.domain.Allocation;
+import com.hack17.hybo.domain.IndexPrice;
 import com.hack17.hybo.domain.One;
 import com.hack17.hybo.domain.Portfolio;
 import com.hack17.hybo.domain.Two;
@@ -137,4 +138,21 @@ public class TestController {
 	//	cal.set(Calendar.ZONE_OFFSET,0);
 		return cal;
 	}
+	
+	@RequestMapping(value="/reverse", method=RequestMethod.GET)
+	@Transactional
+	public void reverseDate(){
+		List<IndexPrice> indexPriceList= portfolioRepository.getAllIndexPrice();
+		for(IndexPrice index:indexPriceList){
+			Calendar cal = Calendar.getInstance();
+			cal.setTime(index.getDate());
+			if(cal.get(Calendar.YEAR)==2014){
+				int day = cal.get(Calendar.DAY_OF_YEAR);
+				cal.set(Calendar.DAY_OF_YEAR, 365-day);
+				index.setDate(cal.getTime());
+				portfolioRepository.persist(index);
+			}
+		}
+	}
+	
 }
