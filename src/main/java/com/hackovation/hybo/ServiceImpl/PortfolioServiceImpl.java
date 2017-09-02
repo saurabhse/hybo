@@ -255,11 +255,13 @@ public class PortfolioServiceImpl implements PortfolioService{
 	}
 
 	public Map<String,Portfolio> buildPortfolio(InvestorProfile profile,int investment,LinkedHashMap<String, Double> assetClassWiseWeight,int clientId,boolean dummy,Date date){
+
 		Portfolio portfolio = new Portfolio();
 		portfolio.setClientId(clientId);
 		portfolio.setTransactionDate(date);
 		List<Allocation> allocationList = new ArrayList<>();
 		Map<String, Portfolio> portfolioMap = new HashMap<>();
+		double usedAllocationValue = 0;
 		for(String assetClass:indexToEtfMap.keySet()){
 			if(!assetClassWiseWeight.containsKey(assetClass)) continue;
 			Allocation allocation = new Allocation();
@@ -290,9 +292,10 @@ public class PortfolioServiceImpl implements PortfolioService{
  			allocation.setCreatedBy(CreatedBy.PORT.name());
  			allocation.setPortfolio(portfolio);
  			allocationList.add(allocation);
+ 			usedAllocationValue += allocation.getQuantity()*allocation.getCostPrice();
 		}
 		portfolio.setAllocations(allocationList);
-		
+		profile.setLiquidity(investment-usedAllocationValue);
 		portfolio.setInvestorProfile(profile);
 		portfolioRepository.persist(portfolio);
 		

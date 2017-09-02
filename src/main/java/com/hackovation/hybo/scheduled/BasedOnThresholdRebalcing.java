@@ -262,8 +262,8 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 				Allocation copiedAllocation = copyAllocationInNewObject(newAllocation, currentDate);
 				copiedAllocation.setQuantity(newQuantity-oldQuantity);
 				copiedAllocation.setBuyDate(currentDate);
-				persistList.add(copiedAllocation);
 				copiedAllocation.setPortfolio(portfolio);
+				persistList.add(copiedAllocation);
 				dbLoggerService.logTransaction(copiedAllocation,0,null,newQuantity-oldQuantity,Action.BUY,com.hack17.hybo.domain.CreatedBy.REBAL);
 			}
 			

@@ -196,16 +196,23 @@ public class BlackLittermanController {
 			cal.setTime(date);
 	 		cal = trimTime(cal);
 	 		double totalValue=0.0;
+	 		Map<String,Double> dataMap = new HashMap<>();
 			for(Allocation allocation:allocationList){
 				if(allocation.getCostPrice()==0d || allocation.getIsActive().equals("N"))continue;
+				String ticker = allocation.getFund().getTicker()+"("+(allocation.getType().substring(0,1))+")";
 				double latestPrice = portfolioRepository.getIndexPriceForGivenDate(allocation.getFund().getTicker(), cal.getTime());
-				ProfileResponse response = new ProfileResponse();
-			//	System.out.println("Old Value "+allocation.getFund().getTicker()+","+allocation.getCostPrice());
-				response.setClientId(Integer.valueOf(clientId));
-				response.setLabel(allocation.getFund().getTicker()+"("+(allocation.getType().substring(0,1))+")");
-				response.setValue(String.valueOf(latestPrice*allocation.getQuantity()));
-			//	System.out.println("New Value "+allocation.getFund().getTicker()+","+latestPrice);
 				totalValue += allocation.getQuantity()*latestPrice;
+				if(dataMap.containsKey(ticker)){
+					dataMap.put(ticker, dataMap.get(ticker)+allocation.getQuantity()*latestPrice);
+				}else
+					dataMap.put(ticker, allocation.getQuantity()*latestPrice);
+					
+			}
+			for(String keys:dataMap.keySet()){
+				ProfileResponse response = new ProfileResponse();
+				response.setClientId(Integer.valueOf(clientId));
+				response.setLabel(keys);
+				response.setValue(String.valueOf(dataMap.get(keys)));
 				responseList.add(response);
 			}
 			PortfolioResponse response = new PortfolioResponse();
