@@ -233,7 +233,7 @@ public class TestController {
 		for(IndexPrice index:indexPriceList){
 			Calendar cal = Calendar.getInstance();
 			cal.setTime(index.getDate());
-			if(cal.get(Calendar.YEAR)==2014 && cal.get(Calendar.MONTH)==Calendar.OCTOBER && cal.get(Calendar.DATE)==05){
+			if(cal.get(Calendar.YEAR)==2015 && cal.get(Calendar.MONTH)==Calendar.OCTOBER && cal.get(Calendar.DATE)==07){
 				index.setPrice(reducedPriceMap.get(index.getIndex()));
 				portfolioRepository.persist(index);
 			}
