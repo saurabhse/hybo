@@ -14,6 +14,7 @@ import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -135,6 +136,7 @@ public class BlackLittermanController {
 					responseList.add(response);
 				}
 			}
+
 			PortfolioResponse response = new PortfolioResponse();
 			response.setTotal(Double.valueOf(numFormat.format(totalValue)));
 			response.setData(responseList);
@@ -214,6 +216,15 @@ public class BlackLittermanController {
 				response.setLabel(keys);
 				response.setValue(String.valueOf(dataMap.get(keys)));
 				responseList.add(response);
+			}
+			double liquidity = portfolio.getInvestorProfile().getLiquidity();
+			if(liquidity != 0){
+				ProfileResponse response = new ProfileResponse();
+				response.setClientId(Integer.valueOf(clientId));
+				response.setLabel("LIQUIDITY");
+				response.setValue(numFormat.format(liquidity));
+				responseList.add(response);
+				totalValue += liquidity;
 			}
 			PortfolioResponse response = new PortfolioResponse();
 			response.setTotal(Double.valueOf(numFormat.format(totalValue)));
@@ -329,8 +340,16 @@ public class BlackLittermanController {
 			MyComparator comparator = new MyComparator();
 			
 			//Preparing data ticker wise and sorted by date
-			Map<String,List<Allocation>> filteredMap = new HashMap<>();
-			for(Allocation allocation:portfolio.getAllocations()){
+			Map<String,List<Allocation>> filteredMap = new LinkedHashMap<>();
+			List<Allocation> allocationList = portfolio.getAllocations();
+			Collections.sort(allocationList,new Comparator<Allocation>() {
+
+				@Override
+				public int compare(Allocation o1, Allocation o2) {
+					return 1-o1.getType().compareTo(o2.getType());
+				}
+			});
+			for(Allocation allocation:allocationList){
 				if(allocation.getCreatedBy().equals(CreatedBy.TLH.name()))continue;
 				String key = allocation.getFund().getTicker();
 				List<Allocation> dataList = filteredMap.get(key);
@@ -339,7 +358,7 @@ public class BlackLittermanController {
 				Collections.sort(dataList,comparator);
 				filteredMap.put(key,dataList);
 			}
-			Map<String,Set<DataVO>> rolledUpMap = new HashMap<>();
+			Map<String,Set<DataVO>> rolledUpMap = new LinkedHashMap<>();
 			Set<String> keySet = filteredMap.keySet();
 			for(String etf:keySet){
 				List<Allocation> allAllocations = filteredMap.get(etf);
