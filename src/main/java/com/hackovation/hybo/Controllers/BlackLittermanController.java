@@ -23,6 +23,7 @@ import java.util.Map.Entry;
 import java.util.Random;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.stream.Collectors;
 
 import javax.transaction.Transactional;
 
@@ -44,6 +45,7 @@ import com.hack17.hybo.domain.CurrentDate;
 import com.hack17.hybo.domain.InvestorProfile;
 import com.hack17.hybo.domain.Portfolio;
 import com.hack17.hybo.domain.TLHRunPortfolioHistory;
+import com.hack17.hybo.domain.TLHRunAllocationHistory;
 import com.hack17.hybo.domain.UserClientMapping;
 import com.hack17.hybo.repository.PortfolioRepository;
 import com.hackovation.hybo.CreatedBy;
@@ -280,6 +282,11 @@ public class BlackLittermanController {
 		Portfolio portfolio = portfolioList.get(0);
 		
 		List<TLHRunPortfolioHistory> tlhRunHistory = portfolioRepository.getTLHRunHistory(portfolio.getId());
+		
+		tlhRunHistory.forEach(runHist->{
+			List<TLHRunAllocationHistory> allocHist = runHist.getAllocations().stream().filter(alloc->CreatedBy.TLH.toString().equals(alloc.getCreatedBy())).collect(Collectors.toList());
+			runHist.setAllocations(allocHist);
+		});
 		
 		
 		ObjectMapper responseMapper = new ObjectMapper();
