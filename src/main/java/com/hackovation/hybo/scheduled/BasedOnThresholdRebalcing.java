@@ -261,7 +261,6 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 				newAllocation.setQuantity(existingAllocation.getQuantity());
 				Allocation copiedAllocation = copyAllocationInNewObject(newAllocation, currentDate);
 				copiedAllocation.setQuantity(newQuantity-oldQuantity);
-				copiedAllocation.setCostPrice(copiedAllocation.getRebalanceDayPrice());
 				copiedAllocation.setBuyDate(currentDate);
 				copiedAllocation.setPortfolio(portfolio);
 				persistList.add(copiedAllocation);
@@ -272,7 +271,7 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 			if(oldQuantity>newQuantity){
 				//just log it for TLH
 				newAllocation.setPortfolio(portfolio);
-				dbLoggerService.logTransaction(existingAllocation,newAllocation.getRebalanceDayPrice(),newAllocation.getTransactionDate(),existingAllocation.getQuantity()-newAllocation.getQuantity(),
+				dbLoggerService.logTransaction(existingAllocation,newAllocation.getCostPrice(),newAllocation.getTransactionDate(),existingAllocation.getQuantity()-newAllocation.getQuantity(),
 						Action.SELL,com.hack17.hybo.domain.CreatedBy.REBAL);
 						
 
@@ -320,9 +319,8 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 			double amountToAssign = remainingAmountForBonds*perc/100;
 			int count = new Double(amountToAssign/latestPrice).intValue();
 			newAllocation.setQuantity(count);
-			newAllocation.setRebalanceDayPrice(latestPrice);
-			newAllocation.setCostPrice(newAllocation.getCostPrice());
-			investment += latestPrice*newAllocation.getQuantity();
+			newAllocation.setCostPrice(latestPrice);
+			investment += newAllocation.getCostPrice()*newAllocation.getQuantity();
 			updatedBondAllocationList.add(newAllocation);
 		}
 		System.out.println(" Final Allocation in bond : "+investment);
@@ -390,7 +388,12 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 			else if(riskTolerance.equals(RiskTolerance.HIGH) && (marketStatus.isGoingDown || marketStatus.isGoingUp)){
 				System.out.println(" Formula Based Rebalncing because RiskToleranc is High and Market is not fluctuating.");
 				newAllocationList = formulaBasedRebalancing(portfolio, equityAllocationList,bondAllocationList,date);
-			}else{
+			}
+			else if(riskTolerance.equals(RiskTolerance.LOW) && (marketStatus.isGoingDown || marketStatus.isGoingUp)){
+				System.out.println(" Formula Based Rebalncing RiskTolerance is Low.");
+				newAllocationList = formulaBasedRebalancing(portfolio, equityAllocationList,bondAllocationList,date);
+			}			
+			else{
 				System.out.println(" Not rebalancing no condition match.");
 			}
 		}catch(Exception e){
@@ -567,12 +570,12 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 			int number = Double.valueOf(cost/etfTodayPrice).intValue();
 			cost = etfTodayPrice;
 			investment += cost*number;
-			newAllocation.setCostPrice(allocation.getCostPrice());
+			newAllocation.setRebalanceDayPrice(allocation.getCostPrice());
+			newAllocation.setRebalanceDayQuantity(allocation.getQuantity());
+			newAllocation.setCostPrice(cost);
 			newAllocation.setPercentage(perc);
 			newAllocation.setQuantity(number);
 			newAllocation.setIsActive("Y");
-			newAllocation.setRebalanceDayQuantity(allocation.getQuantity());
-			newAllocation.setRebalanceDayPrice(cost);
 			newAllocationList.add(newAllocation);
 			log(allocation, newAllocation, currentDate);
 		}
@@ -615,11 +618,12 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 		newAllocation.setCostPrice(allocation.getCostPrice());
 		newAllocation.setInvestment(allocation.getInvestment());
 		newAllocation.setPercentage(allocation.getPercentage());
-		newAllocation.setRebalanceDayPrice(allocation.getRebalanceDayPrice());
 		newAllocation.setQuantity(allocation.getQuantity());
 		newAllocation.setType(allocation.getType());
 		newAllocation.setCreatedBy(CreatedBy.REBAL.name());
 		newAllocation.setIsActive("Y");
+		newAllocation.setRebalanceDayPrice(allocation.getRebalanceDayPrice());
+		newAllocation.setRebalanceDayPerc(allocation.getRebalanceDayPerc());
 		return newAllocation;
 	}
 
