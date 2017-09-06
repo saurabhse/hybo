@@ -67,7 +67,7 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 	public void cron(){
 		CurrentDate existingDate = (CurrentDate)portfolioRepository.getEntity(1, CurrentDate.class);
 		
-		//System.out.println("Cron Running -> "+Calendar.getInstance().getTime());
+		System.out.println("Cron Running -> "+Calendar.getInstance().getTime());
 		//rebalance(existingDate.getDate());
 	}
 	
@@ -261,6 +261,7 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 				newAllocation.setQuantity(existingAllocation.getQuantity());
 				Allocation copiedAllocation = copyAllocationInNewObject(newAllocation, currentDate);
 				copiedAllocation.setQuantity(newQuantity-oldQuantity);
+				copiedAllocation.setCostPrice(copiedAllocation.getRebalanceDayPrice());
 				copiedAllocation.setBuyDate(currentDate);
 				copiedAllocation.setPortfolio(portfolio);
 				persistList.add(copiedAllocation);
@@ -271,7 +272,7 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 			if(oldQuantity>newQuantity){
 				//just log it for TLH
 				newAllocation.setPortfolio(portfolio);
-				dbLoggerService.logTransaction(existingAllocation,newAllocation.getCostPrice(),newAllocation.getTransactionDate(),existingAllocation.getQuantity()-newAllocation.getQuantity(),
+				dbLoggerService.logTransaction(existingAllocation,newAllocation.getRebalanceDayPrice(),newAllocation.getTransactionDate(),existingAllocation.getQuantity()-newAllocation.getQuantity(),
 						Action.SELL,com.hack17.hybo.domain.CreatedBy.REBAL);
 						
 
@@ -319,8 +320,9 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 			double amountToAssign = remainingAmountForBonds*perc/100;
 			int count = new Double(amountToAssign/latestPrice).intValue();
 			newAllocation.setQuantity(count);
-			newAllocation.setCostPrice(latestPrice);
-			investment += newAllocation.getCostPrice()*newAllocation.getQuantity();
+			newAllocation.setRebalanceDayPrice(latestPrice);
+			newAllocation.setCostPrice(newAllocation.getCostPrice());
+			investment += latestPrice*newAllocation.getQuantity();
 			updatedBondAllocationList.add(newAllocation);
 		}
 		System.out.println(" Final Allocation in bond : "+investment);
@@ -565,12 +567,12 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 			int number = Double.valueOf(cost/etfTodayPrice).intValue();
 			cost = etfTodayPrice;
 			investment += cost*number;
-			newAllocation.setCostPrice(cost);
+			newAllocation.setCostPrice(allocation.getCostPrice());
 			newAllocation.setPercentage(perc);
 			newAllocation.setQuantity(number);
 			newAllocation.setIsActive("Y");
 			newAllocation.setRebalanceDayQuantity(allocation.getQuantity());
-			newAllocation.setRebalanceDayPrice(allocation.getCostPrice());
+			newAllocation.setRebalanceDayPrice(cost);
 			newAllocationList.add(newAllocation);
 			log(allocation, newAllocation, currentDate);
 		}
@@ -613,6 +615,7 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 		newAllocation.setCostPrice(allocation.getCostPrice());
 		newAllocation.setInvestment(allocation.getInvestment());
 		newAllocation.setPercentage(allocation.getPercentage());
+		newAllocation.setRebalanceDayPrice(allocation.getRebalanceDayPrice());
 		newAllocation.setQuantity(allocation.getQuantity());
 		newAllocation.setType(allocation.getType());
 		newAllocation.setCreatedBy(CreatedBy.REBAL.name());

@@ -192,7 +192,7 @@ public class TestController {
 		for(IndexPrice index:indexPriceList){
 			Calendar cal = Calendar.getInstance();
 			cal.setTime(index.getDate());
-			if(cal.get(Calendar.YEAR)==2015 && cal.get(Calendar.MONTH)==Calendar.OCTOBER && cal.get(Calendar.DATE)==07){
+			if(cal.get(Calendar.YEAR)==2015 && cal.get(Calendar.MONTH)==Calendar.OCTOBER && cal.get(Calendar.DATE)==01){
 				index.setPrice(reducedPriceMap.get(index.getIndex()));
 				portfolioRepository.persist(index);
 			}
@@ -233,7 +233,7 @@ public class TestController {
 		for(IndexPrice index:indexPriceList){
 			Calendar cal = Calendar.getInstance();
 			cal.setTime(index.getDate());
-			if(cal.get(Calendar.YEAR)==2015 && cal.get(Calendar.MONTH)==Calendar.OCTOBER && cal.get(Calendar.DATE)==07){
+			if(cal.get(Calendar.YEAR)==2015 && cal.get(Calendar.MONTH)==Calendar.OCTOBER && cal.get(Calendar.DATE)==01){
 				index.setPrice(reducedPriceMap.get(index.getIndex()));
 				portfolioRepository.persist(index);
 			}
