@@ -48,7 +48,7 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 	final Map<Double,Double> assetClassTieredTable;
 	Calendar testCalendar = null;
 	double remainingAmountForBonds = 0.0;
-	
+	boolean runRebalancing = false;
 	
 	{
 		assetClassTieredTable = new HashMap<>();
@@ -61,14 +61,19 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 		assetClassTieredTable.put(80.0, 7.0);
 	}
 	
+	public void toggleRebalancing(){
+		runRebalancing = runRebalancing?false:true;
+		System.out.println("Rebalancing "+runRebalancing);
+	}
 	
 	@Scheduled(initialDelay=0,fixedDelay=10000)
 	@Transactional
 	public void cron(){
 		CurrentDate existingDate = (CurrentDate)portfolioRepository.getEntity(1, CurrentDate.class);
-		
-		System.out.println("Rebalancing Job : "+Calendar.getInstance().getTime());
-		rebalance(existingDate.getDate());
+		if(runRebalancing){
+			System.out.println("Rebalancing Job : "+Calendar.getInstance().getTime());
+			rebalance(existingDate.getDate());
+		}
 	}
 	
 	public void test(){

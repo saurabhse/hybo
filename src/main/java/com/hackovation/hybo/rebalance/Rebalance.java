@@ -23,4 +23,5 @@ public interface Rebalance {
 	return map;
 }
 	public void test();
+	public void toggleRebalancing();
 }

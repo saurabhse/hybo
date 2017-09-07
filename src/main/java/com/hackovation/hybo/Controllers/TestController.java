@@ -66,8 +66,11 @@ public class TestController {
 		one.setSetOfTwo(twoSet);
 		portfolioRepository.merge(one);
 	}
-	
-	
+	@RequestMapping(value="/toggleRebalancing", method=RequestMethod.GET)
+	@Transactional
+	public void toggleRebalancing(){
+		rebalance.toggleRebalancing();
+	}
 	@RequestMapping(value="/rebalanceTest", method=RequestMethod.GET)
 	public void testRebalance(){
 		rebalance.test();
