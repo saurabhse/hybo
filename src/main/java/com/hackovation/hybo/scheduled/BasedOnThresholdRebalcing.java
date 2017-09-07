@@ -4,6 +4,8 @@ package com.hackovation.hybo.scheduled;
 
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -12,6 +14,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
 import java.util.Set;
+
+import org.apache.commons.collections4.map.MultiValueMap;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -139,13 +143,17 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 	
 	private boolean shouldTriggerRebalance(Portfolio portfolio,Date currentDate){
 		boolean trigger = false;
+		Calendar cal = Calendar.getInstance();
+		cal.setTime(currentDate);
+		if(cal.get(Calendar.MONTH)==Calendar.DECEMBER) return false;
 		System.out.println("	Level 1 Trigger Check.");
 		int horizonInMonths = portfolio.getInvestorProfile().getInvestmentHorizonInMonths();
 		Date activeAllocationDate = null;
 		List<Allocation> allocationList = getActiveAllocationList(portfolio.getAllocations());
 		for(Allocation allocation:allocationList){
 			if(allocation.getIsActive().equals("Y")){
-				activeAllocationDate = allocation.getTransactionDate();
+				if(activeAllocationDate==null || allocation.getTransactionDate().after(activeAllocationDate))
+					activeAllocationDate = allocation.getTransactionDate();
 			}
 		}
 		int days = DateTimeUtil.getDateDifferenceInDays(currentDate, activeAllocationDate);
@@ -210,9 +218,17 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 			//System.out.println(object.getFund().getTicker()+" -> "+object.getQuantity()+", "+object.getCostPrice()+","+(object.getQuantity()*object.getCostPrice()));
 		}
 		for(Allocation object:allocation){
+			String ticker = object.getFund().getTicker();
 			double value = object.getCostPrice()*object.getQuantity();
-			allocationPercentage.put(object.getFund().getTicker(), value/totalValue*100);
-			//System.out.println(object.getFund().getTicker()+" % -> "+value/totalValue*100);
+			if(allocationPercentage.containsKey(ticker)){
+				value += allocationPercentage.get(ticker);
+			}
+			allocationPercentage.put(object.getFund().getTicker(), value);
+		}
+		
+		for(String key:allocationPercentage.keySet()){
+			double perc = allocationPercentage.get(key)/totalValue;
+			allocationPercentage.put(key, perc);
 		}
 		return allocationPercentage;
 	}
@@ -248,44 +264,120 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 		}
 	}
 	
+	private Allocation cloneAllocation(Allocation allocation){
+		Allocation clonedAllocation = new Allocation();
+		clonedAllocation.setBuyDate(allocation.getBuyDate());
+		clonedAllocation.setCostPrice(allocation.getCostPrice());
+		clonedAllocation.setCreatedBy(allocation.getCreatedBy());
+		clonedAllocation.setExpenseRatio(allocation.getExpenseRatio());
+		clonedAllocation.setFund(allocation.getFund());
+		clonedAllocation.setHoldTillDate(allocation.getHoldTillDate());
+		clonedAllocation.setInvestment(allocation.getInvestment());
+		clonedAllocation.setIsActive(allocation.getIsActive());
+		clonedAllocation.setPercentage(allocation.getPercentage());
+		clonedAllocation.setPortfolio(allocation.getPortfolio());
+		clonedAllocation.setQuantity(allocation.getQuantity());
+		clonedAllocation.setRebalanceDayPerc(allocation.getRebalanceDayPerc());
+		clonedAllocation.setRebalanceDayPrice(allocation.getRebalanceDayPrice());
+		clonedAllocation.setRebalanceDayQuantity(allocation.getRebalanceDayQuantity());
+		clonedAllocation.setTransactionDate(allocation.getTransactionDate());
+		clonedAllocation.setType(allocation.getType());
+		return clonedAllocation;
+	}
 	public void persistAllocationInDatabase(Portfolio portfolio,List<Allocation> existingAllocationList,List<Allocation> newAllocationList,Date date){
 		
+		
+		Map<String,Double> tickerWiseValue = new HashMap<>();
 		List<Allocation> persistList = new ArrayList<>();
+		MultiValueMap<String,Allocation> finalAllocationMap = new MultiValueMap<>();
+		MultiValueMap<String,Allocation> persistAllocationMap = new MultiValueMap<>();
+		for(Allocation allocation:existingAllocationList){
+			if(allocation.getIsActive().equals("N"))continue;
+			String ticker = allocation.getFund().getTicker();
+			Calendar cal = Calendar.getInstance();
+	 		cal.setTime(date);
+	 		cal = trimTime(cal);
+			double latestPrice = portfolioRepository.getIndexPriceForGivenDate(allocation.getFund().getTicker(), cal.getTime());
+			double value = latestPrice*allocation.getQuantity();
+			if(tickerWiseValue.containsKey(ticker))value+=tickerWiseValue.get(ticker);
+			tickerWiseValue.put(ticker, value);
+			Allocation clonedAllocation = cloneAllocation(allocation);
+			clonedAllocation.setCreatedBy(CreatedBy.REBAL.name());
+			clonedAllocation.setTransactionDate(date);
+			finalAllocationMap.put(ticker, clonedAllocation);
+		}
+		
+		
+		System.out.println(" ------------------------AMAn           ");
+		for(Allocation allocation:newAllocationList){
+			System.out.println(allocation);
+		}
 		
 		Calendar cal = Calendar.getInstance();
  		cal.setTime(date);
  		cal = trimTime(cal);
- 		Date currentDate = cal.getTime();
 		Map<String,Allocation> existingAllocationMap = getMapPerETF(existingAllocationList);
 		Map<String,Allocation> newAllocationMap = getMapPerETF(newAllocationList);
 		Set<String> keys = newAllocationMap.keySet();
 		for(String ticker:keys){
 			Allocation newAllocation = newAllocationMap.get(ticker);
-			Allocation existingAllocation = existingAllocationMap.get(ticker);
-			int newQuantity = newAllocation.getQuantity();
-			int oldQuantity = existingAllocation.getQuantity();
-			if(newQuantity>oldQuantity){
-				newAllocation.setQuantity(existingAllocation.getQuantity());
-				Allocation copiedAllocation = copyAllocationInNewObject(newAllocation, currentDate);
-				copiedAllocation.setQuantity(newQuantity-oldQuantity);
-				copiedAllocation.setBuyDate(currentDate);
-				copiedAllocation.setPortfolio(portfolio);
-				persistList.add(copiedAllocation);
-				dbLoggerService.logTransaction(copiedAllocation,0,null,newQuantity-oldQuantity,Action.BUY,com.hack17.hybo.domain.CreatedBy.REBAL);
-			}
+			double newValue = newAllocation.getCostPrice()*newAllocation.getQuantity();
+			double oldValue = tickerWiseValue.get(ticker);
 			
-			newAllocation.setBuyDate(existingAllocation.getBuyDate());
-			if(oldQuantity>newQuantity){
-				//just log it for TLH
-				newAllocation.setPortfolio(portfolio);
-				dbLoggerService.logTransaction(existingAllocation,newAllocation.getCostPrice(),newAllocation.getTransactionDate(),existingAllocation.getQuantity()-newAllocation.getQuantity(),
-						Action.SELL,com.hack17.hybo.domain.CreatedBy.REBAL);
+			if(newValue>oldValue){
+				double differenceValue = newValue-oldValue;
+				int quantity = Double.valueOf(differenceValue/newAllocation.getCostPrice()).intValue();
+				if(quantity>0){
+					newAllocation.setQuantity(quantity);
+					newAllocation.setTransactionDate(date);
+					persistAllocationMap.put(ticker, newAllocation);
+					ArrayList<Allocation> temp = (ArrayList<Allocation>)finalAllocationMap.get(ticker);
+					for(Allocation tempAllocatio:temp)
+						persistAllocationMap.put(ticker,tempAllocatio);
+					dbLoggerService.logTransaction(newAllocation,0,null,quantity,Action.BUY,com.hack17.hybo.domain.CreatedBy.REBAL);
+				}
+			}
+			else if(oldValue>newValue){
+				
+				double differenceValue = oldValue-newValue;
+				ArrayList<Allocation> allocationList = (ArrayList<Allocation>)finalAllocationMap.get(ticker);
+				Collections.sort(allocationList,new Comparator<Allocation>() {
+
+					@Override
+					public int compare(Allocation o1, Allocation o2) {
+						return o1.getBuyDate().compareTo(o2.getBuyDate());
+					}
+				});
+				Iterator<Allocation> iter = allocationList.iterator();
+				int sellQuantity = 0;
+				while(iter.hasNext()){
+					Allocation allocation = iter.next();
+					double value = allocation.getQuantity()*allocation.getCostPrice();
+					if(value>differenceValue){
+						sellQuantity = Double.valueOf(differenceValue/allocation.getCostPrice()).intValue();
+						allocation.setQuantity(allocation.getQuantity()-sellQuantity);
+						allocation.setTransactionDate(date);
+						differenceValue -= sellQuantity*newAllocation.getCostPrice();
+						persistAllocationMap.put(ticker,allocation);
+						dbLoggerService.logTransaction(allocation,newAllocation.getCostPrice(),newAllocation.getTransactionDate(),sellQuantity,
+								Action.SELL,com.hack17.hybo.domain.CreatedBy.REBAL);
+					}else{
+						sellQuantity = allocation.getQuantity();
+						dbLoggerService.logTransaction(allocation,newAllocation.getCostPrice(),
+								newAllocation.getTransactionDate(),sellQuantity,
+								Action.SELL,com.hack17.hybo.domain.CreatedBy.REBAL);
+						iter.remove();
+					}
+				}
+				
 						
 
 			}
 		}
-		persistList.addAll(newAllocationList);
 //		persistList.addAll(existingAllocationList);
+		for(String ticker:persistAllocationMap.keySet()){
+			persistList.addAll(persistAllocationMap.getCollection(ticker));
+		}
 		updatePercLatest(persistList);
 //		updatePercCurrent(persistList);
  		persistPortfolio(portfolio, persistList);
@@ -312,13 +404,24 @@ public class BasedOnThresholdRebalcing implements Rebalance{
  		cal = trimTime(cal);
  		Date currentDate = cal.getTime();
  		double totalOfBondAllocation = 0.0;
- 		for(Allocation existingAllocation:bondAllocationList)
- 			totalOfBondAllocation += existingAllocation.getCostPrice()*existingAllocation.getQuantity();
- 		double investment =0.0;
+ 		Map<String,Double> tickerWiseTotal = new HashMap<>();
  		for(Allocation existingAllocation:bondAllocationList){
+ 			String ticker = existingAllocation.getFund().getTicker();
+ 			double total = existingAllocation.getCostPrice()*existingAllocation.getQuantity();
+ 			totalOfBondAllocation += total;
+ 			if(tickerWiseTotal.containsKey(ticker)){
+ 				total+=tickerWiseTotal.get(ticker);
+ 			}
+ 			tickerWiseTotal.put(ticker, total);
+ 		}
+ 		double investment =0.0;
+ 		List<String> processedTickers = new ArrayList<>();
+ 		for(Allocation existingAllocation:bondAllocationList){
+ 			String ticker = existingAllocation.getFund().getTicker();
+ 			if(processedTickers.contains(ticker)) continue;
+ 			
 			Allocation newAllocation = copyAllocationInNewObject(existingAllocation, currentDate);
-			double allocationPrice = newAllocation.getCostPrice()*newAllocation.getQuantity();
-			double perc = allocationPrice/totalOfBondAllocation*100;
+			double perc = tickerWiseTotal.get(ticker)/totalOfBondAllocation*100;
 			
 			
 			double latestPrice = portfolioRepository.getIndexPriceForGivenDate(newAllocation.getFund().getTicker(), cal.getTime());
@@ -329,6 +432,7 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 			newAllocation.setCostPrice(latestPrice);
 			investment += newAllocation.getCostPrice()*newAllocation.getQuantity();
 			updatedBondAllocationList.add(newAllocation);
+			processedTickers.add(ticker);
 		}
 		System.out.println("	Final Allocation in bond : "+investment);
  		return updatedAllocationList;
@@ -527,9 +631,12 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 		HashMap<String, Double> newPricesPerETF = new HashMap<>();
 		HashMap<String,Double> existPercMap = new HashMap<>();
 		for(Allocation existingAllocation:equityAllocationList){
-			int noOfETF = existingAllocation.getQuantity();
-			Map<String,String> paths = PathsAsPerAssetClass.getETFPaths();
-			existPercMap.put(existingAllocation.getFund().getTicker(), existingAllocation.getCostPrice()*existingAllocation.getQuantity());
+			String ticker = existingAllocation.getFund().getTicker();
+			double value = existingAllocation.getCostPrice()*existingAllocation.getQuantity();
+			if(existPercMap.containsKey(ticker)){
+				value += existPercMap.get(ticker);
+			}
+			existPercMap.put(ticker,value);
 			currentEquityValueOfPortfolio += existingAllocation.getCostPrice()*existingAllocation.getQuantity();
 		
 			double latestPrice = portfolioRepository.getIndexPriceForGivenDate(existingAllocation.getFund().getTicker(), cal.getTime());
@@ -540,26 +647,26 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 		}
 		System.out.println("	Total Equity value in current portfolio : "+currentEquityValueOfPortfolio+"\n");
 		for(Allocation existingAllocation:bondAllocationList){
-			int noOfETF = existingAllocation.getQuantity();
-			Map<String,String> paths = PathsAsPerAssetClass.getETFPaths();
+			
 		
 			double latestPrice = portfolioRepository.getIndexPriceForGivenDate(existingAllocation.getFund().getTicker(), cal.getTime());
 			double cost = latestPrice;
 			currentValueOfPortfolio +=cost*existingAllocation.getQuantity();
 			newPricesPerETF.put(existingAllocation.getFund().getTicker(), latestPrice);
 		}
+		System.out.println("	Total value in current portfolio : "+currentValueOfPortfolio+"\n");
+		
 		Set<String> keys = existPercMap.keySet();
 		for(String key:keys){
 			existPercMap.put(key, 100*existPercMap.get(key)/currentEquityValueOfPortfolio);
 		}
 		
-		//System.out.println(" Value of portfolio while running rebalancing "+currentValueOfPortfolio);
 		
 		final int floor = getFloorValue(riskTolerance, currentValueOfPortfolio);
 		double equityPortion = m*(currentValueOfPortfolio-floor);
 		
 		System.out.println("	EquityPortion = m*(currentValueOfPortfolio-floor \n");
-		System.out.println("	m="+m+", current value of portfolio: "+currentValueOfPortfolio+", floor value: "+floor +"\n");
+		System.out.println("	m = "+m+", current value of portfolio: "+currentValueOfPortfolio+", floor value: "+floor +"\n");
 		
 		equityPortion = Math.abs(equityPortion);
 		remainingAmountForBonds = currentValueOfPortfolio-equityPortion;
@@ -568,8 +675,10 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 		System.out.println("	bond portion :"+remainingAmountForBonds+"\n");
 		Date currentDate = cal.getTime();
 		double investment = 0;
+		List<String> processedTickers = new ArrayList<>();
 		for(Allocation allocation : equityAllocationList){
 			String ticker = allocation.getFund().getTicker();
+			if(processedTickers.contains(ticker)) continue;
 			Allocation newAllocation = copyAllocationInNewObject(allocation, currentDate);
 			double perc = existPercMap.get(ticker);
 			double etfTodayPrice = newPricesPerETF.get(ticker);
@@ -585,8 +694,8 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 			newAllocation.setIsActive("Y");
 			newAllocationList.add(newAllocation);
 			log(allocation, newAllocation, currentDate);
+			processedTickers.add(ticker);
 		}
-		System.out.println("	Final Allocation in equity : "+investment);
 		return newAllocationList;
 	}
 	
@@ -621,6 +730,7 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 		Allocation newAllocation  = new Allocation();
 		newAllocation.setFund(allocation.getFund());
 		newAllocation.setTransactionDate(currentDate);
+		newAllocation.setBuyDate(currentDate);
 		newAllocation.setExpenseRatio(allocation.getExpenseRatio());
 		newAllocation.setCostPrice(allocation.getCostPrice());
 		newAllocation.setInvestment(allocation.getInvestment());
