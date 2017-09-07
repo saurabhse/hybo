@@ -27,6 +27,7 @@ import java.util.stream.Collectors;
 
 import javax.transaction.Transactional;
 
+import org.apache.commons.collections4.map.MultiValueMap;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.MediaType;
@@ -348,7 +349,31 @@ public class BlackLittermanController {
 			
 			//Preparing data ticker wise and sorted by date
 			Map<String,List<Allocation>> filteredMap = new LinkedHashMap<>();
-			List<Allocation> allocationList = portfolio.getAllocations();
+			List<Allocation> allocationList =new LinkedList<>();
+			
+			
+			MultiValueMap<Date, Allocation> transactionDateWiseAllocation = new MultiValueMap<>();
+			for(Allocation allocation:portfolio.getAllocations())
+				transactionDateWiseAllocation.put(allocation.getTransactionDate(), allocation);
+			for(Date date:transactionDateWiseAllocation.keySet()){
+				List<Allocation> allAllocations = (ArrayList<Allocation>)transactionDateWiseAllocation.get(date);
+				double totalValue = 0.0;
+				for(Allocation allocation:allAllocations){
+					Calendar cal = Calendar.getInstance();
+			 		cal.setTime(allocation.getTransactionDate());
+			 		cal = trimTime(cal);
+					double priceOnDate = portfolioRepository.getIndexPriceForGivenDate(allocation.getFund().getTicker(), cal.getTime());
+					allocation.setCostPrice(priceOnDate);
+					totalValue += allocation.getQuantity()*priceOnDate;
+				}
+				for(Allocation allocation:allAllocations){
+					Calendar cal = Calendar.getInstance();
+			 		cal.setTime(allocation.getTransactionDate());
+			 		cal = trimTime(cal);
+					allocation.setPercentage(allocation.getQuantity()*allocation.getCostPrice()/totalValue*100);
+					allocationList.add(allocation);
+				}
+			}
 			Collections.sort(allocationList,new Comparator<Allocation>() {
 
 				@Override
@@ -357,7 +382,7 @@ public class BlackLittermanController {
 				}
 			});
 			for(Allocation allocation:allocationList){
-				if(allocation.getCreatedBy().equals(CreatedBy.TLH.name()))continue;
+//				if(allocation.getCreatedBy().equals(CreatedBy.TLH.name()))continue;
 				String key = allocation.getFund().getTicker();
 				List<Allocation> dataList = filteredMap.get(key);
 				if(dataList==null) dataList = new LinkedList<>();
@@ -376,6 +401,10 @@ public class BlackLittermanController {
 					
 					if(prevAllocation != null && prevAllocation.getCreatedBy().equals(allocation.getCreatedBy()) &&
 							prevAllocation.getTransactionDate().equals(allocation.getTransactionDate())){
+						Calendar cal = Calendar.getInstance();
+				 		cal.setTime(allocation.getTransactionDate());
+				 		cal = trimTime(cal);
+
 						data.setPerEtfPrice(data.getPerEtfPrice());
 						data.setQuantity(data.getQuantity()+allocation.getQuantity());
 						data.setValue(data.getValue()+ (allocation.getQuantity()*allocation.getCostPrice()));
@@ -384,6 +413,7 @@ public class BlackLittermanController {
 						if(data!=null)
 							dataSet.add(data);
 						data = new DataVO();
+						
 						data.setEtf(allocation.getFund().getTicker());
 						data.setQuantity(allocation.getQuantity());
 						data.setPerc(allocation.getPercentage());
