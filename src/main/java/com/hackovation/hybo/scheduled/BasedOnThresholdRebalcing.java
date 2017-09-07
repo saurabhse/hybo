@@ -62,13 +62,13 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 	}
 	
 	
-	@Scheduled(cron="0 0/1 * * * *")
+	@Scheduled(initialDelay=0,fixedDelay=10000)
 	@Transactional
 	public void cron(){
 		CurrentDate existingDate = (CurrentDate)portfolioRepository.getEntity(1, CurrentDate.class);
 		
-		System.out.println("Cron Running -> "+Calendar.getInstance().getTime());
-		//rebalance(existingDate.getDate());
+		System.out.println("Rebalancing Job : "+Calendar.getInstance().getTime());
+		rebalance(existingDate.getDate());
 	}
 	
 	public void test(){
@@ -80,6 +80,7 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 		while(true){
 			testCalendar.add(Calendar.DATE, 45);
 			date = testCalendar.getTime();
+			System.out.println("-------------------------------------------------------------------");
 			System.out.println("Rebalancing Started ... "+date);
 			EtfToIndexMap = HyboUtil.getEtfToIndexMapping();
 			indexToEtfMap = HyboUtil.getIndexToEtfMapping();
@@ -102,36 +103,38 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 	@Transactional
 	public void rebalance(Date date) {
 		
-		System.out.println("Rebalancing Started ... "+date);
+		System.out.println("-----------------------------------------------------");
+		System.out.println("Rebalancing Started Date:  "+date);
 		EtfToIndexMap = HyboUtil.getEtfToIndexMapping();
 		indexToEtfMap = HyboUtil.getIndexToEtfMapping();
 
 		List<Portfolio> listOfPortfolios =  portfolioRepository.getAllPortfoliosBeforeDate(date);
 		
-		System.out.println("Fetched all portfolios... "+listOfPortfolios.size());
-		System.out.println("Grouping Allocation based on portfolio..");
+		System.out.println("Fetched all portfolios. Size is : "+listOfPortfolios.size());
 		Map<Portfolio,List<Allocation>> groupWisePortfolio = groupByUserId(listOfPortfolios);
 		
 		Set<Entry<Portfolio,List<Allocation>>> entrySet = groupWisePortfolio.entrySet();
 		for(Entry<Portfolio,List<Allocation>> entry:entrySet){
 			Portfolio portfolio = entry.getKey();
+			System.out.println("Processing Portfolio for "+portfolio.getClientId());
 			
 			if(!shouldTriggerRebalance(portfolio,date))continue;
 			
 			List<Allocation> portfolioList = entry.getValue();
-			System.out.println("Rebalancing ... "+portfolio);
+			System.out.println("	Rebalancing  Portfolio"+portfolio);
 			rebalancePortfolio(portfolio,portfolioList,date);
+			System.out.println("Completed Processing Portfolio for "+portfolio.getClientId());
+			System.out.println("                 --------                     ");
 		}
 		
 		System.out.println("Rebalancing Done !!! ");
+		System.out.println("--------------------------------------------------------");
 		
 	}
 	
 	private boolean shouldTriggerRebalance(Portfolio portfolio,Date currentDate){
 		boolean trigger = false;
-		
-		
-		System.out.println("Level 1 Trigger Check.");
+		System.out.println("	Level 1 Trigger Check.");
 		int horizonInMonths = portfolio.getInvestorProfile().getInvestmentHorizonInMonths();
 		Date activeAllocationDate = null;
 		List<Allocation> allocationList = getActiveAllocationList(portfolio.getAllocations());
@@ -142,24 +145,23 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 		}
 		int days = DateTimeUtil.getDateDifferenceInDays(currentDate, activeAllocationDate);
 		if(days<30){
-			System.out.println("Not trigerring portfolio for "+portfolio.getClientId()+". Days difference: "+days);
+			System.out.println("	Checkpoint one failed. Days difference: "+days);
+			System.out.println("	Portfolio should be atleast 30 days old");
 		}else if(days>=30 && horizonInMonths>=60){
-			System.out.println("Triggering portfolio for "+portfolio.getClientId()+". Days difference: "+days);
+			System.out.println("	Checkpoint one passed. Days difference: "+days+" And Horizon is "+horizonInMonths+" months");
 			trigger = true;
 		}else if(days>=180){
-			System.out.println("Triggering portfolio for "+portfolio.getClientId()+". Days difference: "+days);
+			System.out.println("	Checkpoint one passed. Days difference: "+days);
 			trigger = true;
 		}else{
 			trigger = false;
-			System.out.println("Not trigerring portfolio for "+portfolio.getClientId()+". Days difference: "+days);
+			System.out.println("	Checkpoint one failed because no condition match. Days difference: "+days+" And Horizon is "+horizonInMonths+" months");
 		}
 		
 		if(trigger){
-			System.out.println("Level 2 Trigger Check since Level 1 passed.");
-			//System.out.println(" ------------- Printing Value and Percentage as per the last processing date --- ");
+			System.out.println("	Checkpoint 2 limit started here.");
 			Map<String,Double> existingPercentageMap = getTypeAllocationPercentage(allocationList);
 			double P = 0.1;//getValueOfP(portfolio, allocationList);
-			//System.out.println(" ------------- Printing Value and Percentage as per the current date --- "+currentDate);
 
 			List<Allocation> currentValueOfAllocations = listOfLatestValue(allocationList,currentDate);
 			Map<String,Double> currentPercentageMap = getTypeAllocationPercentage(currentValueOfAllocations);
@@ -173,17 +175,17 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 				if(latestPer>=min && latestPer<=max){
 					trigger = false;
 				}else{
-					System.out.println(" -------------------------------------- Triggering rebalancing because of :"+key +" , "+currentDate);
-					System.out.println(existingPerc+" ---- "+latestPer);
+					System.out.println("	Checkpoint 2 passed :"+key +" , "+currentDate);
+					System.out.println("	"+existingPerc+" ---- "+latestPer);
 					trigger = true;
 					break;
 				}
 				
 			}
 			if(!trigger)
-				System.out.println(" ---------  Second level check for rebalancing failed!");
+				System.out.println("	Checkpoint 2 failed. Therefore won't trigger Rebalancing!");
 			else
-				System.out.println("-------------- Second level check for rebalancing PASSED  !!! !");
+				System.out.println("	Checkpoint 2 passed.");
 		}
 		return trigger;
 	}
@@ -323,7 +325,7 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 			investment += newAllocation.getCostPrice()*newAllocation.getQuantity();
 			updatedBondAllocationList.add(newAllocation);
 		}
-		System.out.println(" Final Allocation in bond : "+investment);
+		System.out.println("	Final Allocation in bond : "+investment);
  		return updatedAllocationList;
  		//persistPortfolio(portfolio, updatedAllocationList);
 	}
@@ -376,25 +378,25 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 			
 			if(profile.getInvestmentHorizonInMonths()<=36)
 			{
-				System.out.println("Investment Horizon is very less. Therefore no need of rebalancing. "+profile.getInvestmentHorizonInMonths());
+				System.out.println("	Investment Horizon is very less. Therefore no need of rebalancing. "+profile.getInvestmentHorizonInMonths());
 			}
-			if(riskTolerance.equals(RiskTolerance.VERY_HIGH) && marketStatus.isGoingUp){
-				System.out.println(" Not rebalancing because RiskToleranc is High and Market is going up.");
+			else if(riskTolerance.equals(RiskTolerance.VERY_HIGH) && marketStatus.isGoingUp){
+				System.out.println("	Not rebalancing because RiskToleranc is High and Market is going up.");
 			}
 			else if(riskTolerance.equals(RiskTolerance.MODERATE) && marketStatus.isFluctuating){
-				System.out.println(" Tiered Rebalncing because RiskToleranc is Moderate/Medium and Market is fluctuating.");
+				System.out.println("	Tiered Rebalncing because RiskToleranc is Moderate/Medium and Market is fluctuating.");
 				newAllocationList = tieredBasedRebalancing(portfolio, equityAllocationList,bondAllocationList,date);
 			}
 			else if(riskTolerance.equals(RiskTolerance.HIGH) && (marketStatus.isGoingDown || marketStatus.isGoingUp)){
-				System.out.println(" Formula Based Rebalncing because RiskToleranc is High and Market is not fluctuating.");
+				System.out.println("	Formula Based Rebalncing because RiskToleranc is High and Market is not fluctuating.");
 				newAllocationList = formulaBasedRebalancing(portfolio, equityAllocationList,bondAllocationList,date);
 			}
 			else if(riskTolerance.equals(RiskTolerance.LOW) && (marketStatus.isGoingDown || marketStatus.isGoingUp)){
-				System.out.println(" Formula Based Rebalncing RiskTolerance is Low.");
+				System.out.println("	Formula Based Rebalncing RiskTolerance is Low.");
 				newAllocationList = formulaBasedRebalancing(portfolio, equityAllocationList,bondAllocationList,date);
 			}			
 			else{
-				System.out.println(" Not rebalancing no condition match.");
+				System.out.println("	Not rebalancing no condition match related to Risktolerance and Market Condition.");
 			}
 		}catch(Exception e){
 			e.printStackTrace();
@@ -507,8 +509,8 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 
 		
 		
-		System.out.println("Total Equity value old: "+equityValueOld+"\n");
-		System.out.println("Total Bond value old: "+bondValueOld+"\n");
+		System.out.println("	Total Equity value old: "+equityValueOld+"\n");
+		System.out.println("	Total Bond value old: "+bondValueOld+"\n");
 	
 		final int m = 3;
 		Calendar cal = Calendar.getInstance();
@@ -531,7 +533,7 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 			newPricesPerETF.put(existingAllocation.getFund().getTicker(), latestPrice);
 			
 		}
-		System.out.println("Total Equity value in current portfolio : "+currentEquityValueOfPortfolio+"\n");
+		System.out.println("	Total Equity value in current portfolio : "+currentEquityValueOfPortfolio+"\n");
 		for(Allocation existingAllocation:bondAllocationList){
 			int noOfETF = existingAllocation.getQuantity();
 			Map<String,String> paths = PathsAsPerAssetClass.getETFPaths();
@@ -551,14 +553,14 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 		final int floor = getFloorValue(riskTolerance, currentValueOfPortfolio);
 		double equityPortion = m*(currentValueOfPortfolio-floor);
 		
-		System.out.println("double equityPortion = m*(currentValueOfPortfolio-floor \n");
-		System.out.println("m="+m+", current value of portfolio: "+currentValueOfPortfolio+", floor value: "+floor +"\n");
+		System.out.println("	EquityPortion = m*(currentValueOfPortfolio-floor \n");
+		System.out.println("	m="+m+", current value of portfolio: "+currentValueOfPortfolio+", floor value: "+floor +"\n");
 		
 		equityPortion = Math.abs(equityPortion);
 		remainingAmountForBonds = currentValueOfPortfolio-equityPortion;
 		
-		System.out.println("equity portion :"+equityPortion+"\n");
-		System.out.println("bond portion :"+remainingAmountForBonds+"\n");
+		System.out.println("	equity portion :"+equityPortion+"\n");
+		System.out.println("	bond portion :"+remainingAmountForBonds+"\n");
 		Date currentDate = cal.getTime();
 		double investment = 0;
 		for(Allocation allocation : equityAllocationList){
@@ -579,7 +581,7 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 			newAllocationList.add(newAllocation);
 			log(allocation, newAllocation, currentDate);
 		}
-		System.out.println(" Final Allocation in equity : "+investment);
+		System.out.println("	Final Allocation in equity : "+investment);
 		return newAllocationList;
 	}
 	
