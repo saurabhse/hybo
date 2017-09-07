@@ -211,7 +211,7 @@ public class PutDataController {
 	@RequestMapping(method=RequestMethod.GET,value="/getCurrentDate")
 	public @ResponseBody String getSystemDate() throws ParseException {
 		CurrentDate existingDate = (CurrentDate)portfolioRepository.getEntity(1, CurrentDate.class);
-		SimpleDateFormat sdf = new SimpleDateFormat("dd-MMMMM-yyyy");
+		SimpleDateFormat sdf = new SimpleDateFormat("dd-MMM-yyyy");
 		String dateStr = "{\"label\":\""+sdf.format(existingDate.getDate())+"\"}";
 		return dateStr;
 	}
