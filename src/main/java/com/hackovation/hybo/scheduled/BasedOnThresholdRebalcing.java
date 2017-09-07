@@ -316,13 +316,15 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 		Calendar cal = Calendar.getInstance();
  		cal.setTime(date);
  		cal = trimTime(cal);
-		Map<String,Allocation> existingAllocationMap = getMapPerETF(existingAllocationList);
 		Map<String,Allocation> newAllocationMap = getMapPerETF(newAllocationList);
 		Set<String> keys = newAllocationMap.keySet();
 		for(String ticker:keys){
 			Allocation newAllocation = newAllocationMap.get(ticker);
 			double newValue = newAllocation.getCostPrice()*newAllocation.getQuantity();
 			double oldValue = tickerWiseValue.get(ticker);
+			
+			System.out.println(" Aman : "+ticker);
+			System.out.println(newValue+","+oldValue);
 			
 			if(newValue>oldValue){
 				double differenceValue = newValue-oldValue;
@@ -436,7 +438,6 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 		}
 		System.out.println("	Final Allocation in bond : "+investment);
  		return updatedAllocationList;
- 		//persistPortfolio(portfolio, updatedAllocationList);
 	}
 	
 	public HashMap<AllocationType, List<Allocation>> getAllocationBasedOnType(List<Allocation> allocationList){

@@ -382,7 +382,7 @@ public class BlackLittermanController {
 				}
 			});
 			for(Allocation allocation:allocationList){
-//				if(allocation.getCreatedBy().equals(CreatedBy.TLH.name()))continue;
+				if(allocation.getCreatedBy().equals(CreatedBy.TLH.name()))continue;
 				String key = allocation.getFund().getTicker();
 				List<Allocation> dataList = filteredMap.get(key);
 				if(dataList==null) dataList = new LinkedList<>();
