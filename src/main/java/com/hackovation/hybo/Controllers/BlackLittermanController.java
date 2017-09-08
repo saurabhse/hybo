@@ -285,7 +285,7 @@ public class BlackLittermanController {
 		List<TLHRunPortfolioHistory> tlhRunHistory = portfolioRepository.getTLHRunHistory(portfolio.getId());
 		
 		tlhRunHistory.forEach(runHist->{
-			List<TLHRunAllocationHistory> allocHist = runHist.getAllocations().stream().filter(alloc->CreatedBy.TLH.toString().equals(alloc.getCreatedBy())).collect(Collectors.toList());
+			List<TLHRunAllocationHistory> allocHist = runHist.getAllocations().stream().filter(alloc->!CreatedBy.PORT.toString().equals(alloc.getCreatedBy())).collect(Collectors.toList());
 			runHist.setAllocations(allocHist);
 		});
 		

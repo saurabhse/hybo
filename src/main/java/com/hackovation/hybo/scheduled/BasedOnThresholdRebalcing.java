@@ -145,7 +145,7 @@ public class BasedOnThresholdRebalcing implements Rebalance{
 		boolean trigger = false;
 		Calendar cal = Calendar.getInstance();
 		cal.setTime(currentDate);
-		if(cal.get(Calendar.MONTH)==Calendar.DECEMBER) return false;
+		if(cal.get(Calendar.MONTH)==Calendar.DECEMBER || cal.get(Calendar.MONTH)==Calendar.MARCH) return false;
 		System.out.println("	Level 1 Trigger Check.");
 		int horizonInMonths = portfolio.getInvestorProfile().getInvestmentHorizonInMonths();
 		Date activeAllocationDate = null;
