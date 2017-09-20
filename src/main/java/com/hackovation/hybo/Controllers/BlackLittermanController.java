@@ -2,6 +2,7 @@
 package com.hackovation.hybo.Controllers;
 
 import java.io.IOException;
+import java.text.DateFormat;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.text.ParseException;
@@ -20,6 +21,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
 import java.util.TreeSet;
@@ -49,6 +51,8 @@ import com.hack17.hybo.domain.TLHRunPortfolioHistory;
 import com.hack17.hybo.domain.TLHRunAllocationHistory;
 import com.hack17.hybo.domain.UserClientMapping;
 import com.hack17.hybo.repository.PortfolioRepository;
+import com.hack17.hybo.repository.TransactionRepository;
+import com.hack17.hybo.util.DateTimeUtil;
 import com.hackovation.hybo.CreatedBy;
 import com.hackovation.hybo.Util.HyboUtil;
 import com.hackovation.hybo.bean.Data;
@@ -74,7 +78,10 @@ public class BlackLittermanController {
 	PortfolioRepository portfolioRepository;
 	@Autowired
 	PortfolioService portfolioService;
-	
+
+	@Autowired
+    TransactionRepository tranRepo;
+
 	@Autowired
 	Rebalance rebalance;
 	
@@ -275,7 +282,7 @@ public class BlackLittermanController {
 		return str;
 	}*/
 	
-	@RequestMapping(value="/getTLHCid", method=RequestMethod.GET,produces = "application/json")
+	/*@RequestMapping(value="/getTLHCid", method=RequestMethod.GET,produces = "application/json")
 	public @ResponseBody String getTLHListGivenUser(@RequestParam(name="userId") String userId) throws JsonProcessingException{
 		int clientId = getClientId(userId);
 		
@@ -294,7 +301,7 @@ public class BlackLittermanController {
 		String str = responseMapper.writeValueAsString(tlhRunHistory);
 		System.out.println(str);
 		return str;
-	}
+	}*/
 	
 	private void processTLHData(List<TLHResponse> response,Map<String,List<Allocation>> filteredMap){
 		Set<String> keys = filteredMap.keySet();
@@ -868,5 +875,43 @@ class MyComparator implements Comparator<Allocation>{
 		cal.set(Calendar.MILLISECOND,0);
 	//	cal.set(Calendar.ZONE_OFFSET,0);
 		return cal;
+	}
+	@RequestMapping(value="/getTLHCid", method=RequestMethod.GET,produces = "application/json")
+	public @ResponseBody String getTLHListGivenUser(@RequestParam(name="userId") String userId) throws JsonProcessingException{
+		int clientId = getClientId(userId);
+		
+		List<Portfolio>	portfolioList = portfolioRepository.getPortfolio(Integer.valueOf(clientId));
+		Portfolio portfolio = portfolioList.get(0);
+		
+		List<TLHRunPortfolioHistory> tlhRunHistory = portfolioRepository.getTLHRunHistory(portfolio.getId());
+		
+		tlhRunHistory.forEach(runHist->{
+			Optional<Date> optMaxDate = runHist.getAllocations()
+					.stream()
+					.map(alloc->DateTimeUtil.getDatedd_MMM_yyyy(alloc.getBuyDate()))
+					.max((d1,d2)->d1.compareTo(d2));//collect(Collectors.toList())
+			//List<TLHRunAllocationHistory> allocHist = runHist.getAllocations().stream().filter(alloc->CreatedBy.TLH.toString().equals(alloc.getCreatedBy())).collect(Collectors.toList());
+			//runHist.setAllocations(allocHist);
+			runHist.setTransactions(tranRepo.getTransactions(portfolio, optMaxDate.get(), com.hack17.hybo.domain.CreatedBy.TLH));
+		});
+		
+		
+		
+		DateFormat df = new SimpleDateFormat("dd-MM-yyyy");
+		ObjectMapper responseMapper = new ObjectMapper();
+		responseMapper.setDateFormat(df);
+		String str = responseMapper.writeValueAsString(tlhRunHistory);
+		System.out.println(str);
+		return str;
+	}
+	
+	@RequestMapping(value="/explain", method=RequestMethod.GET,produces = "application/json")
+	public @ResponseBody String getExplaination(@RequestParam(name="question") String question) throws JsonProcessingException{
+		List<String> explaination = tranRepo.explainTransactions(question);
+		ObjectMapper responseMapper = new ObjectMapper();
+		
+		String str = responseMapper.writeValueAsString(explaination);
+		System.out.println(str);
+		return str;
 	}
 }
